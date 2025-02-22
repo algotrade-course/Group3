@@ -1,0 +1,4 @@
+pandas
+numpy
+mplfinance
+psycopg2-binary
