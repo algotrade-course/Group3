@@ -10,7 +10,7 @@ def load_data():
     with open('database.json') as f:
         return json.load(f)
     
-def create_connection(db_info):
+def create_connection (db_info):
     con= psycopg.connect(
       host=db_info['host'],
       port=db_info['port'],
@@ -73,8 +73,8 @@ def process_data(data):
     "total_quantity": "Volume"
     })
     df = df.sort_values(by=["Date", "tickersymbol"]).reset_index(drop=True)
-    pprint.pprint(df.head(100))
-    return data
+    # pprint.pprint(df.head(100))
+    return df
 
 if __name__ == "__main__":
     db_info = load_data()

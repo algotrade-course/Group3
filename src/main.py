@@ -2,11 +2,13 @@ import pandas as pd
 from utils import calculate_ema, calculate_rsi, calculate_vwap, calculate_atr, detect_trend
 from data import load_data, create_connection, get_data_from_db,process_data
 
-def load_data():
+def load_and_process_data():
     db_info = load_data()
     connection = create_connection(db_info)
     data=get_data_from_db(connection,'2022-12-28')
-    process_data(data)
+    return process_data(data)
+
+
 
 def is_valid_trade(data, index):
     
@@ -60,11 +62,11 @@ def should_close_position(entry_price, current_price, stop_loss=-3, take_profit=
 
 
 if __name__ == "__main__":
-    data = load_data()
+    data = load_and_process_data()
 
-    data['EMA5'] = calculate_ema(data, 5)
-    data['EMA20'] = calculate_ema(data, 20)
-    data['RSI'] = calculate_rsi(data, 14)
+    data['EMA5'] = calculate_ema(data['Close'], 5)
+    data['EMA20'] = calculate_ema(data['Close'], 20)
+    data['RSI'] = calculate_rsi(data['Close'], 14)
     data['VWAP'] = calculate_vwap(data)
     data['ATR'] = calculate_atr(data, 14)
     data['Sideway'] = detect_trend(data)
