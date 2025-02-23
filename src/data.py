@@ -23,7 +23,7 @@ def create_connection (db_info):
 def get_data_from_db(connection, date):
     query=f"""
             SELECT tb_max.datetime AS date,  -- Keep as DATE
-                tb_total.datetime::TIME AS time,  -- Extract TIME from total table
+                TO_CHAR(tb_total.datetime, 'HH24:MI') AS time,
                 tb_max.tickersymbol AS symbol,
                 tb_max.price AS max,
                 tb_min.price AS min,
@@ -73,7 +73,7 @@ def process_data(data):
     "total_quantity": "Volume"
     })
     df = df.sort_values(by=["Date", "tickersymbol"]).reset_index(drop=True)
-    # pprint.pprint(df.head(100))
+    pprint.pprint(df.head(10))
     return df
 
 if __name__ == "__main__":
