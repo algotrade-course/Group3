@@ -1,55 +1,53 @@
+from helper import open_position, close_positions, position_type
+from data import get_processed_data
+from utils import calculate_ema, calculate_rsi
 
 
 holdings = []
+data = get_processed_data("2022-12-11", "2022-12-30")
 
-def backtesting(data):
+def backtesting(data, sma_period=14, initial_capital=100000):
     prev_min = None
     trading_data = data.copy()
-
-    for min in data.index:
-
+    asset_value = initial_capital
+    holdings = []
+    
+    for minute in data.index:
         if prev_min is None:
-            prev_min = min
+            prev_min = minute
             continue
 
-        cur_price = data['Close'][min]
-        
-        # Determine if any positions need to be closed
-        # If some cases in the trading algorithm, we need to make sure to close the positions first when we get a new price point
-        # You need to specify the correct code to close the position here. One line is sufficient.
-        # YOUR CODE HERE
-        raise NotImplementedError()
-        
-        # Update asset value when position is realized
+        cur_price = data.loc[minute, 'Close']
+
+        holdings, total_realized_pnf, total_unrealized_pnf = close_positions(cur_price, holdings)
+
         asset_value = asset_value + total_realized_pnf
 
-        # Update asset history in both cases
         if total_realized_pnf == 0:
-            trading_data.loc[date, 'Asset'] = asset_value + total_unrealized_pnf
+            trading_data.loc[minute, 'Asset'] = asset_value + total_unrealized_pnf
         else:
-            trading_data.loc[date, 'Asset'] = asset_value
+            trading_data.loc[minute, 'Asset'] = asset_value
 
-        # Make sure to open one contract only
         if holdings:
             continue
 
-        # Calculating new signal
-        prev_price = data['Close']['WTM'][prev_date]
-        prev_sma = data[SMA_SYMBOL][prev_date]
-        cur_sma = data[SMA_SYMBOL][date]
-        
-        # Open a LONG position when there are signals and add to the holdings
-        # You need to specify the code to open a LONG position here. Refer to the SMA Algorithm in the lecture if needed.
-        # YOUR CODE HERE
-        raise NotImplementedError()
+        prev_price = data.loc[prev_min, 'Close']
+        prev_sma = data.loc[prev_min, f'SMA_{sma_period}']
+        cur_sma = data.loc[minute, f'SMA_{sma_period}']
 
-        # Open a SHORT position when there are signals and add to the holdings
-        # You need to specify the code to open a SHORT position here. Refer to the SMA Algorithm in the lecture if needed.
-        # YOUR CODE HERE
-        raise NotImplementedError()
+        # Open a LONG position if price crosses above SMA
+        if prev_price < prev_sma and cur_price > cur_sma:
+            holdings.append({'type': 'LONG', 'entry_price': cur_price})
         
-        # Prepare for the next iteration
-        prev_date = date
+        # Open a SHORT position if price crosses below SMA
+        elif prev_price > prev_sma and cur_price < cur_sma:
+            holdings.append({'type': 'SHORT', 'entry_price': cur_price})
+
+        prev_min = minute  # Update previous minute
 
     trading_data = trading_data.dropna()
     data = trading_data.copy()
+    
+    return trading_data
+
+

@@ -51,3 +51,6 @@ def close_positions(
             new_holdings.append((position_type, entry_point))
     
     return new_holdings, total_realized_pnl, total_unrealized_pnl
+
+def position_type():
+    raise ValueError("Not implemented")
