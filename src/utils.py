@@ -51,8 +51,7 @@ def calculate_atr(data, period=14):
 def check_volume_trend(data):
     avg_volume = data['Volume'].rolling(10).mean()
     increasing_volume = data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.1 # 10% higherr than avg. True/False
-    decreasing_volume = data['Volume'].iloc[-1] < avg_volume.iloc[-1] * 0.9 # 10% lower than avg. True/False
-    return increasing_volume, decreasing_volume
+    return increasing_volume
     
 def detect_trend(data, short_period=5, long_period=20):
 
