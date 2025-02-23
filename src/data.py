@@ -76,11 +76,43 @@ def process_data(data):
     pprint.pprint(df.head(10))
     return df
 
+import pandas as pd
+from datetime import datetime, timedelta
+
+def get_processed_data(from_date, to_date):
+    db_info = load_data()
+    connection = create_connection(db_info)
+    
+    if connection is None:
+        raise ValueError("Database connection failed.")
+    
+    try:
+        all_data = []
+        current_date = datetime.strptime(from_date, "%Y-%m-%d")
+        end_date = datetime.strptime(to_date, "%Y-%m-%d")
+        
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            data = get_data_from_db(connection, date_str) 
+            processed_data = process_data(data)  
+            all_data.append(processed_data)  
+            current_date += timedelta(days=1)  
+        
+        merged_series = pd.concat(all_data) if all_data else pd.Series(dtype='float64')
+
+    finally:
+        connection.close() 
+    
+    return merged_series
+
+
 if __name__ == "__main__":
     db_info = load_data()
     connection = create_connection(db_info)
     data=get_data_from_db(connection,'2022-12-28')
     data = process_data(data)
-    pprint.pprint(data['Close'])
+    #testing only
+    pprint.pprint(data['Close'][5])
+    print(data.index)
 
 
