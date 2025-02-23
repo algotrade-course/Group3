@@ -80,6 +80,7 @@ if __name__ == "__main__":
     db_info = load_data()
     connection = create_connection(db_info)
     data=get_data_from_db(connection,'2022-12-28')
-    process_data(data)
+    data = process_data(data)
+    pprint.pprint(data['Close'])
 
 
