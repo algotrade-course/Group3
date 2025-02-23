@@ -48,13 +48,18 @@ def calculate_atr(data, period=14):
 
     return atr
 
-
+def check_volume_trend(data):
+    avg_volume = data['Volume'].rolling(10).mean()
+    increasing_volume = data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.1 # 10% higherr than avg. True/False
+    return increasing_volume
+    
 def detect_trend(data, short_period=5, long_period=20):
 
     ema_short = calculate_ema(data['Close'], short_period)
     ema_long = calculate_ema(data['Close'], long_period)
     atr = calculate_atr(data)
     sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < atr * 0.1
-    return sideway 
+    return [sideway,check_volume_trend(data)]
+
 
     
