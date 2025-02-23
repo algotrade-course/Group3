@@ -34,14 +34,24 @@ def calculate_vwap(data):
     return pd.Series(cumulative_vwap, index=data.index)
     
 def calculate_atr(data, period=14):
-    print("Not calculated")
+    high_low = data["High"] - data["Low"]
+    high_close = (data["High"] - data["Close"].shift()).abs()
+    low_close = (data["Low"] - data["Close"].shift()).abs()
+    high_close.fillna(high_low, inplace=True)
+    low_close.fillna(high_low, inplace=True)
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = tr.rolling(window=period).mean()
+
+    return atr
+
 
 def detect_trend(data, short_period=5, long_period=20):
 
     ema_short = calculate_ema(data, short_period)
     ema_long = calculate_ema(data, long_period)
-    
-    sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < data['ATR'] * 0.1
-    return sideway 
+    atr = calculate_atr(data)
+    sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < atr * 0.1
+    return sideway
+
 
     
