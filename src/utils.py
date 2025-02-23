@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+import pprint
 
 # Note: infput is the closes prices of each candle withifn the window. type is pandas series.
 def calculate_ema(data, period):
+    print(data)
     return pd.Series(data).ewm(span=period, adjust=False).mean()
 
 
@@ -49,8 +51,8 @@ def calculate_atr(data, period=14):
 
 def detect_trend(data, short_period=5, long_period=20):
 
-    ema_short = calculate_ema(data, short_period)
-    ema_long = calculate_ema(data, long_period)
+    ema_short = calculate_ema(data['Close'], short_period)
+    ema_long = calculate_ema(data['Close'], long_period)
     atr = calculate_atr(data)
     sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < atr * 0.1
     return sideway 
