@@ -1,53 +1,60 @@
-from helper import open_position, close_positions, position_type
 from data import get_processed_data
-from utils import calculate_ema, calculate_rsi
+from utils import close_positions, open_position, open_position_type, close_position_type
+import numpy as np
+import matplotlib.pyplot as plt
+import pprint
+import pandas as pd
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 
+INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))  # Default to 100M if not found
+CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
+MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
+                           
 holdings = []
-data = get_processed_data("2022-12-11", "2022-12-30")
 
-def backtesting(data, sma_period=14, initial_capital=100000):
-    prev_min = None
-    trading_data = data.copy()
-    asset_value = initial_capital
-    holdings = []
-    
-    for minute in data.index:
-        if prev_min is None:
-            prev_min = minute
-            continue
+def backtesting(data, holdings=holdings):
+    cash = INITAL_CAPITAL # Available cash for trading
+    portfolio_values = []  
+    total_realized_pnl = 0.0  
 
-        cur_price = data.loc[minute, 'Close']
+    for i in range(len(data)):
+        row = data.iloc[i]
+        cur_price = row["Close"]
 
-        holdings, total_realized_pnf, total_unrealized_pnf = close_positions(cur_price, holdings)
+        # Step 1: Close position if needed
+        close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
+        if close_action in [1, 2]:
+            print("Closing position")  
+            new_holdings, realized_pnl, _ = close_positions(cur_price, holdings)
+            total_realized_pnl += realized_pnl * CONTRACT_SIZE* 1000
+            cash += realized_pnl * CONTRACT_SIZE* 1000  
+            holdings = new_holdings  
 
-        asset_value = asset_value + total_realized_pnf
+        open_action = open_position_type(data.iloc[:i+1],cur_price)
+        margin_needed = cur_price * CONTRACT_SIZE * MARGIN_REQUIREMENT*1000
 
-        if total_realized_pnf == 0:
-            trading_data.loc[minute, 'Asset'] = asset_value + total_unrealized_pnf
-        else:
-            trading_data.loc[minute, 'Asset'] = asset_value
+        if open_action == 1 and cash >= margin_needed:
+            print("Open Long")  # Open LONG
+            holdings = open_position("LONG", cur_price, holdings)
+            cash -= margin_needed  
 
-        if holdings:
-            continue
+        elif open_action == 2 and cash >= margin_needed:
+            print("Open SHORT")  # Open SHORT
+            holdings = open_position("SHORT", cur_price, holdings)
+            cash -= margin_needed  
 
-        prev_price = data.loc[prev_min, 'Close']
-        prev_sma = data.loc[prev_min, f'SMA_{sma_period}']
-        cur_sma = data.loc[minute, f'SMA_{sma_period}']
+        _, _, unrealized_pnl = close_positions(cur_price, holdings)
+        portfolio_value = cash + unrealized_pnl * CONTRACT_SIZE*1000
+        portfolio_values.append({"Date": row["Date"], "Portfolio Value": portfolio_value})
 
-        # Open a LONG position if price crosses above SMA
-        if prev_price < prev_sma and cur_price > cur_sma:
-            holdings.append({'type': 'LONG', 'entry_price': cur_price})
-        
-        # Open a SHORT position if price crosses below SMA
-        elif prev_price > prev_sma and cur_price < cur_sma:
-            holdings.append({'type': 'SHORT', 'entry_price': cur_price})
+    return portfolio_values
 
-        prev_min = minute  # Update previous minute
 
-    trading_data = trading_data.dropna()
-    data = trading_data.copy()
-    
-    return trading_data
-
+if __name__ == "__main__":
+    data = pd.read_csv('data.csv')
+    portfolio_values=backtesting(data)
+    pprint.pprint(portfolio_values)
 

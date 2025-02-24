@@ -1,9 +1,8 @@
 import json
 import psycopg2 as psycopg
-import pandas as pd
-import mplfinance as mpf
 import pprint
-from datetime import datetime
+import pandas as pd
+from datetime import datetime, timedelta
 
 
 def load_data():
@@ -23,7 +22,7 @@ def create_connection (db_info):
 def get_data_from_db(connection, date):
     query=f"""
             SELECT tb_max.datetime AS date,  -- Keep as DATE
-                TO_CHAR(tb_total.datetime, 'HH24:MI') AS time,
+                tb_total.datetime::TIME AS time, 
                 tb_max.tickersymbol AS symbol,
                 tb_max.price AS max,
                 tb_min.price AS min,
@@ -76,8 +75,6 @@ def process_data(data):
     pprint.pprint(df.head(10))
     return df
 
-import pandas as pd
-from datetime import datetime, timedelta
 
 def get_processed_data(from_date, to_date):
     db_info = load_data()
@@ -106,13 +103,9 @@ def get_processed_data(from_date, to_date):
     return merged_series
 
 
-if __name__ == "__main__":
-    db_info = load_data()
-    connection = create_connection(db_info)
-    data=get_data_from_db(connection,'2022-12-28')
-    data = process_data(data)
-    #testing only
-    pprint.pprint(data['Close'][5])
-    print(data.index)
-
+# if __name__ == "__main__":
+#     db_info = load_data()
+#     connection = create_connection(db_info)
+#     data = get_processed_data("2022-12-11", "2022-12-30")
+#     data.to_csv('data.csv')
 
