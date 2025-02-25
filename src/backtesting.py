@@ -21,8 +21,7 @@ def backtesting(data, holdings=holdings):
     total_realized_pnl = 0.0  
 
     for i in range(len(data)):
-        row = data.iloc[i]
-        cur_price = row["Close"]
+        cur_price = data.iloc[i-1]['Close']
 
         # Step 1: Close position if needed
         close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
@@ -48,7 +47,7 @@ def backtesting(data, holdings=holdings):
 
         _, _, unrealized_pnl = close_positions(cur_price, holdings)
         portfolio_value = cash + unrealized_pnl * CONTRACT_SIZE*1000
-        portfolio_values.append({"Date": row["Date"], "Portfolio Value": portfolio_value})
+        portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
 
     return portfolio_values
 
