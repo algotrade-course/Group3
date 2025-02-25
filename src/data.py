@@ -19,61 +19,88 @@ def create_connection (db_info):
     )
     return con
 
-def get_data_from_db(connection, date):
+def get_data_from_db(connection, start_date, end_date):
     query=f"""
-            SELECT tb_max.datetime AS date,  -- Keep as DATE
-                tb_total.datetime::TIME AS time, 
-                tb_max.tickersymbol AS symbol,
-                tb_max.price AS max,
-                tb_min.price AS min,
-                tb_close.price AS "close",
-                tb_open.price AS "open",
-                tb_total.quantity AS total_quantity
-            FROM quote.max tb_max
-            INNER JOIN quote.min tb_min
-                ON tb_max.tickersymbol = tb_min.tickersymbol
-                AND tb_max.datetime = tb_min.datetime
-            INNER JOIN quote.close tb_close
-                ON tb_min.tickersymbol = tb_close.tickersymbol
-                AND tb_min.datetime = tb_close.datetime::DATE  -- Ensure correct date matching
-            INNER JOIN quote.open tb_open
-                ON tb_open.tickersymbol = tb_close.tickersymbol
-                AND tb_open.datetime = tb_close.datetime
-            INNER JOIN (
-                SELECT m.tickersymbol, m.datetime,  -- Include datetime here
-                    MAX(m.quantity) AS quantity
-                FROM quote.total m
-                WHERE m.tickersymbol LIKE 'VN30F%' 
-                AND m.datetime::DATE = '{date}'
-                GROUP BY m.tickersymbol, m.datetime
-            ) tb_total
-            ON tb_open.tickersymbol = tb_total.tickersymbol
-            AND tb_open.datetime::DATE = tb_total.datetime::DATE -- Ensure matching
-            WHERE tb_max.tickersymbol LIKE 'VN30F%' 
-            AND tb_max.datetime = '{date}';
+            SELECT 
+            m.datetime::DATE AS date,
+            m.datetime::TIME AS time,
+            m.tickersymbol,
+            m.price,
+            tb_open.price AS open_price,
+            tb_close.price AS close_price,
+            tb_max.price AS high_price,
+            tb_min.price AS low_price,
+            tb.quantity AS total_quantity
+        FROM "quote"."matched" m
+        INNER JOIN "quote"."open" tb_open 
+            ON m.tickersymbol = tb_open.tickersymbol 
+            AND m.datetime::DATE = tb_open.datetime::DATE
+        INNER JOIN "quote"."close" tb_close 
+            ON m.tickersymbol = tb_close.tickersymbol 
+            AND m.datetime::DATE = tb_close.datetime::DATE
+        INNER JOIN "quote"."max" tb_max 
+            ON m.tickersymbol = tb_max.tickersymbol 
+            AND m.datetime::DATE = tb_max.datetime::DATE
+        INNER JOIN "quote"."min" tb_min 
+            ON m.tickersymbol = tb_min.tickersymbol 
+            AND m.datetime::DATE = tb_min.datetime::DATE
+        INNER JOIN "quote"."total" tb 
+            ON m.tickersymbol = tb.tickersymbol 
+            AND m.datetime = tb.datetime
+        WHERE m.datetime::DATE BETWEEN DATE '{start_date}' AND DATE '{end_date}'
+        AND m.tickersymbol LIKE 'VN30F%'
+        ORDER BY m.datetime, m.tickersymbol;
 
-            """
+  
+           """
     with connection.cursor() as cursor:
         cursor.execute(query)
         data=cursor.fetchall()
         return data
   
+
+
+def get_expiry_date(year, month):
+    first_day = datetime(year, month, 1)
+    first_thursday = first_day + timedelta(days=(3 - first_day.weekday() + 7) % 7)
+    third_thursday = first_thursday + timedelta(weeks=2)
+    return third_thursday
+
 def process_data(data):
-    columns = ["date", "time","tickersymbol", "max_price", "min_price", "close_price", "open_price", "total_quantity"]
+    columns = ["date", "time", "tickersymbol", "price", "open_price", "close_price", "high_price", "Low_price", "quantity"]
     df = pd.DataFrame(data, columns=columns)
+
     df = df.rename(columns={
-    "date": "Date",
-    "time": "Time",
-    "tickersymbol": "tickersymbol",
-    "max_price": "High",
-    "min_price": "Low",
-    "close_price": "Close",
-    "open_price": "Open",
-    "total_quantity": "Volume"
+        "date": "Date",
+        "time": "Time",
+        "tickersymbol": "tickersymbol",
+        "high_price": "High",
+        "Low_price": "Low",
+        "close_price": "Close",
+        "open_price": "Open",
+        "quantity": "Volume"
     })
-    df = df.sort_values(by=["Date", "tickersymbol"]).reset_index(drop=True)
-    pprint.pprint(df.head(10))
-    return df
+
+    df["Date"] = pd.to_datetime(df["Date"])
+
+
+    df["year"] = df["tickersymbol"].str.extract(r'VN30F(\d{2})(\d{2})')[0].astype(int) + 2000
+    df["month"] = df["tickersymbol"].str.extract(r'VN30F(\d{2})(\d{2})')[1].astype(int)
+
+    df["date_year"] = df["Date"].dt.year
+    df["date_month"] = df["Date"].dt.month
+
+    df["expiry_date"] = df.apply(lambda row: get_expiry_date(row["date_year"], row["date_month"]), axis=1)
+
+
+    df_filtered = df[
+        ((df["Date"] <= df["expiry_date"]) & (df["month"] == df["date_month"]) & (df["year"] == df["date_year"])) |
+        ((df["Date"] > df["expiry_date"]) & (df["month"] == df["date_month"] + 1) & (df["year"] == df["date_year"]))
+    ]
+
+    df_filtered = df_filtered.drop(columns=["year", "month", "date_year", "date_month", "expiry_date"])
+    pprint.pprint(df_filtered.head(10))
+    return df_filtered
 
 
 def get_processed_data(from_date, to_date):
@@ -103,44 +130,8 @@ def get_processed_data(from_date, to_date):
     return merged_series
 
 
-import pandas as pd
-
-def process_data_by_minute(csv_file, output_file="data_inMinute.csv"):
-    # Read the CSV file
-    df = pd.read_csv(csv_file, header=None, names=["ID", "Date", "Time", "tickersymbol", "High", "Low", "Close", "Open", "Volume"])
-
-    # Ensure DateTime format (handling milliseconds)
-    df["DateTime"] = pd.to_datetime(df["Date"] + " " + df["Time"], errors='coerce')
-
-    # Extract Minute (remove seconds & milliseconds)
-    df["Minute"] = df["DateTime"].dt.strftime('%Y-%m-%d %H:%M')
-
-    # Sort by DateTime (important for last value selection)
-    df = df.sort_values(by=["DateTime"]).reset_index(drop=True)
-
-    # Group by Minute and Ticker Symbol
-    grouped_df = df.groupby(["Minute", "tickersymbol"]).agg(
-        High=("High", "max"),      # Highest price in that minute
-        Low=("Low", "min"),        # Lowest price in that minute
-        Close=("Close", "last"),   # Last recorded price in that minute
-        Volume=("Volume", "last")  # Volume at the last recorded second
-    ).reset_index()
-
-    # Set Open price as the previous Close
-    grouped_df["Open"] = grouped_df.groupby("tickersymbol")["Close"].shift(1)
-
-    # Save to CSV
-    grouped_df.to_csv(output_file, index=False)
-
-    return grouped_df
-
-
-
 if __name__ == "__main__":
-#     db_info = load_data()
-#     connection = create_connection(db_info)
-#     data = get_processed_data("2022-12-11", "2022-12-30")
-#     data.to_csv('data.csv')
-    df = process_data_by_minute("data.csv", "minute_data.csv")
-    print(df.head())
-
+    db_info = load_data()
+    connection = create_connection(db_info)
+    data=process_data(get_data_from_db(connection, "2023-01-01", '2023-03-31'))
+    data.to_csv('data.csv')

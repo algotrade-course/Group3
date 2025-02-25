@@ -145,3 +145,5 @@ if __name__ == "__main__":
     data = pd.read_csv('data.csv')
     values=open_position_type(data.iloc[:10], 1000)
     pprint.pprint(values)
+
+
