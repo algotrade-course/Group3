@@ -14,14 +14,17 @@ def calculate_ema(df, column, period):
     return df[column].ewm(span=period, adjust=False).mean()
 
 def calculate_rsi(df, column='Close', period=14):
-    delta = df[column].diff()
-    gain = np.where(delta > 0, delta, 0)
-    loss = np.where(delta < 0, -delta, 0)
+    delta = df[column].diff().to_numpy()
+    gain = np.zeros_like(delta)
+    loss = np.zeros_like(delta)
+    mask = delta > 0
+    gain[mask] = delta[mask]
+    loss[~mask] = -delta[~mask]
     avg_gain = pd.Series(gain).ewm(span=period, adjust=False).mean()
     avg_loss = pd.Series(loss).ewm(span=period, adjust=False).mean()
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-    return np.where(avg_loss == 0, 100, rsi)
+    return np.minimum(rsi, 100)
     
 
 def calculate_vwap(df):
@@ -53,9 +56,14 @@ def check_volume_trend(data):
 def detect_trend(data, short_period=5, long_period=20,column='Close'):
     ema_short = calculate_ema(data,column, short_period)
     ema_long = calculate_ema(data,column, long_period)
+    
     atr = calculate_atr(data)
+    
     sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < atr * 0.1
-    return [sideway,check_volume_trend(data)]
+    
+    is_sideway = sideway.iloc[-1] if isinstance(sideway, pd.Series) else sideway
+
+    return [is_sideway,check_volume_trend(data)]
 
 
 def open_position(position_type: str, entry_point: float, holdings: List[Tuple[str, float]]) -> List[Tuple[str, float]]:
@@ -95,13 +103,17 @@ def open_position_type(data, cur_price):
     ema20 = calculate_ema(data,'Close', 20)
     vwap = calculate_vwap(data)
     rsi = calculate_rsi(data,'Close', 14)
+    # print(f'RSI: {rsi}')
+    # print(f'EMA5: {ema5}')
+    # print(f'EMA20: {ema20}')
+    # print(f'vwap: {vwap}')
     trend_info = detect_trend(data, 5, 20, 'Close')  
-
-    if trend_info[0] or rsi < 30 or rsi > 70:
+    
+    if (trend_info[0] == 1) or pd.isna(rsi.iloc[-1]) or (rsi[-1] < 30 or rsi[-1] > 70):
         return 0  
-
-    long_criteria = int(ema5 > ema20) + int(cur_price > vwap) + int(50 <= rsi < 70) + int(trend_info[1])
-    short_criteria = int(ema5 < ema20) + int(cur_price < vwap) + int(30 < rsi < 50) + int(not trend_info[1])
+    
+    long_criteria = int(ema5.iloc[-1] > ema20.iloc[-1]) + int(cur_price > vwap) + int(50 <= rsi.iloc[-1] < 70) + int(trend_info[1])
+    short_criteria = int(ema5.iloc[-1] < ema20.iloc[-1]) + int(cur_price < vwap) + int(30 < rsi.iloc[-1] < 50) + int(not trend_info[1])
 
     if long_criteria >= 3:
         return 1  
@@ -117,9 +129,10 @@ def close_position_type(data, cur_price, holdings):
 
     has_long_position = any(pos[0] == "LONG" for pos in holdings)
     has_short_position = any(pos[0] == "SHORT" for pos in holdings)
-
-    close_long_criteria = int(ema5 < ema20) + int(rsi > 70) + int(cur_price > ema20)
-    close_short_criteria = int(ema5 > ema20) + int(rsi < 30) + int(cur_price < ema5)
+    
+    print(ema5)
+    close_long_criteria = int(ema5.iloc[-1] < ema20.iloc[-1]) + int(rsi.iloc[-1] > 70) + int(cur_price > ema20.iloc[-1])
+    close_short_criteria = int(ema5.iloc[-1] > ema20.iloc[-1]) + int(rsi.iloc[-1] < 30) + int(cur_price < ema5.iloc[-1])
 
     if has_long_position and close_long_criteria >= 1:
         return 1  # Close LONG
