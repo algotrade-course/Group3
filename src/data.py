@@ -103,9 +103,44 @@ def get_processed_data(from_date, to_date):
     return merged_series
 
 
-# if __name__ == "__main__":
+import pandas as pd
+
+def process_data_by_minute(csv_file, output_file="data_inMinute.csv"):
+    # Read the CSV file
+    df = pd.read_csv(csv_file, header=None, names=["ID", "Date", "Time", "tickersymbol", "High", "Low", "Close", "Open", "Volume"])
+
+    # Ensure DateTime format (handling milliseconds)
+    df["DateTime"] = pd.to_datetime(df["Date"] + " " + df["Time"], errors='coerce')
+
+    # Extract Minute (remove seconds & milliseconds)
+    df["Minute"] = df["DateTime"].dt.strftime('%Y-%m-%d %H:%M')
+
+    # Sort by DateTime (important for last value selection)
+    df = df.sort_values(by=["DateTime"]).reset_index(drop=True)
+
+    # Group by Minute and Ticker Symbol
+    grouped_df = df.groupby(["Minute", "tickersymbol"]).agg(
+        High=("High", "max"),      # Highest price in that minute
+        Low=("Low", "min"),        # Lowest price in that minute
+        Close=("Close", "last"),   # Last recorded price in that minute
+        Volume=("Volume", "last")  # Volume at the last recorded second
+    ).reset_index()
+
+    # Set Open price as the previous Close
+    grouped_df["Open"] = grouped_df.groupby("tickersymbol")["Close"].shift(1)
+
+    # Save to CSV
+    grouped_df.to_csv(output_file, index=False)
+
+    return grouped_df
+
+
+
+if __name__ == "__main__":
 #     db_info = load_data()
 #     connection = create_connection(db_info)
 #     data = get_processed_data("2022-12-11", "2022-12-30")
 #     data.to_csv('data.csv')
+    df = process_data_by_minute("data.csv", "minute_data.csv")
+    print(df.head())
 
