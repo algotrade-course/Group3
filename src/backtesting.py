@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
-
 INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))  # Default to 100M if not found
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
