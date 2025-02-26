@@ -44,7 +44,7 @@ def get_data_from_db(connection, start_date, end_date):
         INNER JOIN "quote"."min" tb_min 
             ON m.tickersymbol = tb_min.tickersymbol 
             AND m.datetime::DATE = tb_min.datetime::DATE
-        INNER JOIN "quote"."total" tb 
+        INNER JOIN "quote"."matchedvolume" tb 
             ON m.tickersymbol = tb.tickersymbol 
             AND m.datetime = tb.datetime
         WHERE m.datetime::DATE BETWEEN DATE '{start_date}' AND DATE '{end_date}'
