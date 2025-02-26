@@ -34,16 +34,16 @@ def backtesting(data, holdings=[]):
                 new_holdings, realized_pnl, closed_position_type = close_positions(cur_price, holdings)
                 total_realized_pnl += realized_pnl * CONTRACT_SIZE * 1000
                 cash += realized_pnl * CONTRACT_SIZE * 1000
-
+                holdings = new_holdings 
+                
+            if not holdings:
                 trade_entry.update({
                     "Action": "Close",
-                    "Position Type": closed_position_type,
+                    "Position Type": "none",
                     "Trade Price": cur_price,
                     "Total Money": cash
                 })
                 trade_log.append(trade_entry) 
-                holdings = new_holdings 
-
             continue  
 
         # Step 2: Check if we can open a position
