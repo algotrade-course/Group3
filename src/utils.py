@@ -109,7 +109,7 @@ def open_position_type(data, cur_price):
     # print(f'vwap: {vwap}')
     trend_info = detect_trend(data, 5, 20, 'Close')  
     
-    if (trend_info[0] == 1) or pd.isna(rsi.iloc[-1]) or (rsi[-1] < 30 or rsi[-1] > 70):
+    if (trend_info[0] == 1) or pd.isna(rsi.iloc[-1]) or (rsi.iloc[-1] < 30 or rsi.iloc[-1] > 70):
         return 0  
     
     long_criteria = int(ema5.iloc[-1] > ema20.iloc[-1]) + int(cur_price > vwap) + int(50 <= rsi.iloc[-1] < 70) + int(trend_info[1])
@@ -130,7 +130,7 @@ def close_position_type(data, cur_price, holdings):
     has_long_position = any(pos[0] == "LONG" for pos in holdings)
     has_short_position = any(pos[0] == "SHORT" for pos in holdings)
     
-    print(ema5)
+    # print(ema5)
     close_long_criteria = int(ema5.iloc[-1] < ema20.iloc[-1]) + int(rsi.iloc[-1] > 70) + int(cur_price > ema20.iloc[-1])
     close_short_criteria = int(ema5.iloc[-1] > ema20.iloc[-1]) + int(rsi.iloc[-1] < 30) + int(cur_price < ema5.iloc[-1])
 
@@ -144,6 +144,6 @@ def close_position_type(data, cur_price, holdings):
 if __name__ == "__main__":
     data = pd.read_csv('data.csv')
     values=open_position_type(data.iloc[:10], 1000)
-    pprint.pprint(values)
+    # pprint.pprint(values)
 
 

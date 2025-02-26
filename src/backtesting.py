@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pprint
 import pandas as pd
 from dotenv import load_dotenv
+from evaluation2 import plot_backtesting_results
 import os
 load_dotenv()
 
@@ -55,4 +56,5 @@ if __name__ == "__main__":
     data = pd.read_csv('data.csv')
     portfolio_values=backtesting(data)
     pprint.pprint(portfolio_values)
+    plot_backtesting_results(portfolio_values)
 
