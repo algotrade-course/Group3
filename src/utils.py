@@ -15,24 +15,34 @@ def calculate_ema(df, column, period):
 
 def calculate_rsi(df, column='Close', period=14):
     delta = df[column].diff().to_numpy()
+    
     gain = np.zeros_like(delta)
     loss = np.zeros_like(delta)
     mask = delta > 0
     gain[mask] = delta[mask]
     loss[~mask] = -delta[~mask]
+    
     avg_gain = pd.Series(gain).ewm(span=period, adjust=False).mean()
     avg_loss = pd.Series(loss).ewm(span=period, adjust=False).mean()
+    
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-    return np.minimum(rsi, 100)
+    
+    rsi = np.where(avg_loss == 0, 100, rsi)  # RSI = 100 when there are no losses
+    rsi = np.minimum(rsi, 100)  # Ensure RSI doesn't exceed 100
+    
+    return pd.Series(rsi, index=df.index)
     
 
-def calculate_vwap(df):
-    df = df.dropna(subset=['High', 'Low', 'Close', 'Volume'])
-    df = df[df['Volume'] > 0]
+def calculate_vwap(df,window_size=5):
+    df = df.dropna().copy()  # Drop NaN and ensure a new copy
+    df = df[df['Volume'] > 0].copy()  # Filter non-zero volume and ensure a copy
+
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
-    cumulative_vol = df['Volume'].cumsum()
-    return (typical_price * df['Volume']).cumsum() / cumulative_vol
+
+    vwap_series = (typical_price * df['Volume']).rolling(window=window_size).sum() / df['Volume'].rolling(window=window_size).sum()
+
+    return vwap_series.iloc[-1]
 
 
 def calculate_atr(data, period=14):
@@ -109,17 +119,31 @@ def open_position_type(data, cur_price):
     # print(f'vwap: {vwap}')
     trend_info = detect_trend(data, 5, 20, 'Close')  
     
+    # print ("------------------------------------------------")
+    # print(f"trend_info: {trend_info[0]}, {trend_info[1]}, {trend_info[0] == 1}")
+    #print(f'rsi: {rsi.iloc[-1]}')
+    # print(f'ema5: {ema5.iloc[-1]}')
+    # print(f'ema20: {ema20.iloc[-1]}')
+    # print(f'vwap: {vwap}')
+    #print(f'isRSINA: {pd.isna(rsi.iloc[-1])}')
+    # print ("------------------------------------------------")
+    
+    
+    
     if (trend_info[0] == 1) or pd.isna(rsi.iloc[-1]) or (rsi.iloc[-1] < 30 or rsi.iloc[-1] > 70):
+        # print("HERE 1")
         return 0  
     
     long_criteria = int(ema5.iloc[-1] > ema20.iloc[-1]) + int(cur_price > vwap) + int(50 <= rsi.iloc[-1] < 70) + int(trend_info[1])
     short_criteria = int(ema5.iloc[-1] < ema20.iloc[-1]) + int(cur_price < vwap) + int(30 < rsi.iloc[-1] < 50) + int(not trend_info[1])
 
     if long_criteria >= 3:
+        # print("HERE 3")
         return 1  
     if short_criteria >= 3:
+        # print("HERE 4")
         return 2  
-
+    # print("HERE 2")
     return 0  
 
 def close_position_type(data, cur_price, holdings):

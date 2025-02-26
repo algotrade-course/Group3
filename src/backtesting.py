@@ -15,45 +15,52 @@ MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
                            
 holdings = []
 
-def backtesting(data, holdings=holdings):
-    cash = INITAL_CAPITAL # Available cash for trading
-    portfolio_values = []  
-    total_realized_pnl = 0.0  
+def backtesting(data, holdings=[]):
+    cash = INITAL_CAPITAL  # Available cash for trading
+    portfolio_values = []
+    total_realized_pnl = 0.0
 
     for i in range(len(data)):
-        cur_price = data.iloc[i-1]['Close']
+        cur_price = data.iloc[i]['Close']
 
         # Step 1: Close position if needed
-        close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
-        if close_action in [1, 2]:
-            print("Closing position")  
-            new_holdings, realized_pnl, _ = close_positions(cur_price, holdings)
-            total_realized_pnl += realized_pnl * CONTRACT_SIZE* 1000
-            cash += realized_pnl * CONTRACT_SIZE* 1000  
-            holdings = new_holdings  
+        if holdings:  # If we have open positions
+            close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
+            if close_action in [1, 2]:
+                new_holdings, realized_pnl, _ = close_positions(cur_price, holdings)
+                total_realized_pnl += realized_pnl * CONTRACT_SIZE * 1000
+                cash += realized_pnl * CONTRACT_SIZE * 1000
+                holdings = new_holdings  # Update holdings
+            continue
 
-        open_action = open_position_type(data.iloc[:i+1],cur_price)
-        margin_needed = cur_price * CONTRACT_SIZE * MARGIN_REQUIREMENT*1000
+        # Step 2: Check if we can open a position
+        open_action = open_position_type(data.iloc[:i+1], cur_price)
+        # print(f'open action: {open_action}')
+        margin_needed = 0
 
         if open_action == 1 and cash >= margin_needed:
-            print("Open Long")  # Open LONG
             holdings = open_position("LONG", cur_price, holdings)
-            cash -= margin_needed  
+            cash -= margin_needed
 
         elif open_action == 2 and cash >= margin_needed:
-            print("Open SHORT")  # Open SHORT
             holdings = open_position("SHORT", cur_price, holdings)
-            cash -= margin_needed  
+            cash -= margin_needed
 
-        _, _, unrealized_pnl = close_positions(cur_price, holdings)
-        portfolio_value = cash + unrealized_pnl * CONTRACT_SIZE*1000
+        unrealized_pnl = sum(
+            (cur_price - pos[1]) * CONTRACT_SIZE * 1000 if pos[0] == "LONG" else
+            (pos[1] - cur_price) * CONTRACT_SIZE * 1000
+            for pos in holdings
+        )
+
+        portfolio_value = cash + unrealized_pnl
         portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
 
     return portfolio_values
 
 
+
 if __name__ == "__main__":
-    data = pd.read_csv('data.csv')
+    data = pd.read_csv('dataByMinute.csv')
     portfolio_values=backtesting(data)
     pprint.pprint(portfolio_values)
     plot_backtesting_results(portfolio_values)
