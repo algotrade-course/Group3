@@ -131,24 +131,38 @@ def get_processed_data(from_date, to_date):
 
 import pandas as pd
 
+import pandas as pd
+
 def aggregate_to_minutes(input_csv, output_csv):
-
     df = pd.read_csv(input_csv)
-    df["datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 
+    df["datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
     df.set_index("datetime", inplace=True)
+
+    valid_trading_times = (
+        (df.index.time >= pd.to_datetime("09:00:00").time()) & 
+        (df.index.time <= pd.to_datetime("11:30:00").time())
+    ) | (
+        (df.index.time >= pd.to_datetime("13:00:00").time()) & 
+        (df.index.time <= pd.to_datetime("14:45:00").time())
+    )
+
+    df = df[valid_trading_times]
 
     df_resampled = df.resample('1T').agg({
         'price': ['first', 'last', 'max', 'min'],
         'Volume': 'sum'
-    })
+    }).dropna() 
 
     df_resampled.columns = ['Open', 'Close', 'High', 'Low', 'Volume']
     df_resampled.reset_index(inplace=True)
+
     df_resampled.to_csv(output_csv, index=False)
     print(f"Processed data saved to: {output_csv}")
 
-
 if __name__ == "__main__":
-
+    # db_info = load_data()
+    # connection = create_connection(db_info)
+    # data=process_data(get_data_from_db(connection, "2023-01-01", '2023-03-31'))
+    # data.to_csv('data.csv')
     aggregate_to_minutes("data.csv", "dataByMinute.csv")
