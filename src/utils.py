@@ -25,12 +25,23 @@ def calculate_rsi(df, column='Close', period=14):
     return pd.Series(rsi, index=df.index)
 
 
+# def calculate_vwap(df, window_size=5):
+#     df = df.dropna().copy()
+#     df = df[df['Volume'] > 0].copy()
+#     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+#     vwap_series = (typical_price * df['Volume']).rolling(window=window_size).sum() / df['Volume'].rolling(window=window_size).sum()
+#     return vwap_series.iloc[-1]
+
 def calculate_vwap(df, window_size=5):
     df = df.dropna().copy()
-    df = df[df['Volume'] > 0].copy()
+    df = df[df['Volume'] > 0].copy()  
+
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+    
     vwap_series = (typical_price * df['Volume']).rolling(window=window_size).sum() / df['Volume'].rolling(window=window_size).sum()
-    return vwap_series.iloc[-1]
+    
+    return vwap_series.iloc[-1] if len(vwap_series) > 0 else np.nan 
+
 
 
 def calculate_atr(data, period=14):
@@ -128,7 +139,7 @@ def open_position_type(data, cur_price):
         adx.iloc[-1] > 25  
     ])
 
-    return 1 if long_criteria >= 4 else 2 if short_criteria >= 4 else 0
+    return 1 if long_criteria >= 3 else 2 if short_criteria >= 3 else 0
 
 
 def close_position_type(data, cur_price, holdings):
@@ -139,4 +150,4 @@ def close_position_type(data, cur_price, holdings):
     has_short = any(pos[0] == "SHORT" for pos in holdings)
     close_long = sum([ema8.iloc[-1] < ema21.iloc[-1], rsi.iloc[-1] > 70, cur_price > ema21.iloc[-1]])
     close_short = sum([ema8.iloc[-1] > ema21.iloc[-1], rsi.iloc[-1] < 30, cur_price < ema8.iloc[-1]])
-    return 1 if has_long and close_long >= 1 else 2 if has_short and close_short >= 1 else 0
+    return 1 if has_long and close_long >= 2 else 2 if has_short and close_short >= 2 else 0
