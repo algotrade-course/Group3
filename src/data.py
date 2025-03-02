@@ -164,8 +164,8 @@ def aggregate_to_5_minutes(input_csv, output_csv):
     print(f"Processed 5-minute OHLC data saved to: {output_csv}")
 
 if __name__ == "__main__":
-    # db_info = load_data()
-    # connection = create_connection(db_info)
-    # data=process_data(get_data_from_db(connection, "2023-01-01", '2023-03-31'))
-    # data.to_csv('data.csv')
+    db_info = load_data()
+    connection = create_connection(db_info)
+    data=process_data(get_data_from_db(connection, "2023-01-01", '2023-12-31'))
+    data.to_csv('data.csv')
     aggregate_to_5_minutes("data.csv", "dataByMinute.csv")

@@ -41,7 +41,7 @@ def plot_backtesting_results(portfolio_values):
         return
 
     mdd, drawdown = maximumDrawdown(portfolio_series)
-    sharpe_ratio = sharpRatio(portfolio_series, rf_rate=0.03)
+    sharpe_ratio = sharpRatio(portfolio_series, rf_rate=0.0)
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax1.plot(dates, portfolio_series, label="Portfolio Value", color="blue", linewidth=2)

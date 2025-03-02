@@ -32,15 +32,12 @@ def calculate_rsi(df, column='Close', period=14):
 #     vwap_series = (typical_price * df['Volume']).rolling(window=window_size).sum() / df['Volume'].rolling(window=window_size).sum()
 #     return vwap_series.iloc[-1]
 
-def calculate_vwap(df, window_size=5):
+def calculate_vwap(df):
     df = df.dropna().copy()
-    df = df[df['Volume'] > 0].copy()  
-
+    df = df[df['Volume'] > 0].copy()
     typical_price = (df['High'] + df['Low'] + df['Close']) / 3
-    
-    vwap_series = (typical_price * df['Volume']).rolling(window=window_size).sum() / df['Volume'].rolling(window=window_size).sum()
-    
-    return vwap_series.iloc[-1] if len(vwap_series) > 0 else np.nan 
+    vwap_series = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
+    return vwap_series.iloc[-1]
 
 
 
@@ -53,12 +50,18 @@ def calculate_atr(data, period=14):
     return tr.rolling(window=period).mean()
 
 
-def check_volume_trend(data):
-    avg_volume = data['Volume'].rolling(10).mean()
-    return data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.1
+# def check_volume_trend(data):
+#     avg_volume = data['Volume'].rolling(15).mean()
+#     return data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.0
+
+def check_volume_trend(data, direction="LONG"):
+    avg_volume = data['Volume'].rolling(15).mean() 
+    if direction == "LONG":
+        return data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.05
+    return data['Volume'].iloc[-1] < avg_volume.iloc[-1] * 0.95
 
 
-def detect_trend(data, short_period=8, long_period=21, column='Close'):
+def detect_trend(data, short_period=10, long_period=30, column='Close'):
     ema_short = calculate_ema(data, column, short_period)
     ema_long = calculate_ema(data, column, long_period)
     atr = calculate_atr(data)
@@ -108,9 +111,8 @@ def calculate_adx(data, period=14):
 
 
 def open_position_type(data, cur_price):
-
-    ema8 = calculate_ema(data, 'Close', 8)
-    ema21 = calculate_ema(data, 'Close', 21)
+    ema8 = calculate_ema(data, 'Close', 10)
+    ema21 = calculate_ema(data, 'Close', 30)
     vwap = calculate_vwap(data)
     rsi = calculate_rsi(data, 'Close', 14)
     atr = calculate_atr(data)
@@ -120,34 +122,36 @@ def open_position_type(data, cur_price):
     rsi_lower = 30 + (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
     rsi_upper = 70 - (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
 
-    if (trend_info[0]  or pd.isna(rsi.iloc[-1])  or not (rsi_lower < rsi.iloc[-1] < rsi_upper) or adx.iloc[-1] < 25):
+    if (trend_info[0]  or pd.isna(rsi.iloc[-1]) or not (rsi_lower < rsi.iloc[-1] < rsi_upper) or adx.iloc[-1] < 30):
         return 0  
 
     long_criteria = sum([
         ema8.iloc[-1] > ema21.iloc[-1],  
         cur_price > vwap,  
-        rsi_lower <= rsi.iloc[-1] < rsi_upper,  
+        rsi_lower < rsi.iloc[-1] < rsi_upper,  
         trend_info[1], 
-        adx.iloc[-1] > 25  
+        adx.iloc[-1] > 30  
     ])
 
     short_criteria = sum([
         ema8.iloc[-1] < ema21.iloc[-1],  
         cur_price < vwap,  
-        rsi_lower < rsi.iloc[-1] <= rsi_upper, 
+        rsi_lower < rsi.iloc[-1] < rsi_upper, 
         not trend_info[1],
-        adx.iloc[-1] > 25  
+        adx.iloc[-1] > 30 
     ])
 
     return 1 if long_criteria >= 3 else 2 if short_criteria >= 3 else 0
 
 
 def close_position_type(data, cur_price, holdings):
-    ema8 = calculate_ema(data, 'Close', 8)
-    ema21 = calculate_ema(data, 'Close', 21)
+    ema8 = calculate_ema(data, 'Close', 10)
+    ema21 = calculate_ema(data, 'Close', 30)
     rsi = calculate_rsi(data, 'Close', 14)
     has_long = any(pos[0] == "LONG" for pos in holdings)
     has_short = any(pos[0] == "SHORT" for pos in holdings)
+    
+    
     close_long = sum([ema8.iloc[-1] < ema21.iloc[-1], rsi.iloc[-1] > 70, cur_price > ema21.iloc[-1]])
     close_short = sum([ema8.iloc[-1] > ema21.iloc[-1], rsi.iloc[-1] < 30, cur_price < ema8.iloc[-1]])
     return 1 if has_long and close_long >= 2 else 2 if has_short and close_short >= 2 else 0
