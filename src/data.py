@@ -129,10 +129,7 @@ def get_processed_data(from_date, to_date):
     
     return merged_series
 
-
-import pandas as pd
-
-def aggregate_to_minutes(input_csv, output_csv):
+def aggregate_to_5_minutes(input_csv, output_csv):
     df = pd.read_csv(input_csv)
 
     df["datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
@@ -147,35 +144,28 @@ def aggregate_to_minutes(input_csv, output_csv):
     )
     df = df[valid_trading_times]
 
-    df_resampled = df.resample('1T').agg({
+    df_resampled = df.resample('5T').agg({
         'tickersymbol': 'first',  
-        'price': ['first', 'last', 'max', 'min'],  
-        'Volume': 'sum'
+        'price': ['first', 'last', 'max', 'min'], 
+        'Volume': 'sum'  
     }).dropna()
 
     df_resampled.columns = ['tickersymbol', 'Open', 'Close', 'High', 'Low', 'Volume']
 
-    # Reset index
     df_resampled.reset_index(inplace=True)
 
-    # Extract Date and Time separately
     df_resampled["Date"] = df_resampled["datetime"].dt.date
     df_resampled["Time"] = df_resampled["datetime"].dt.time
 
-    # Reorder columns
     df_resampled = df_resampled[["Date", "Time", "tickersymbol", "Open", "Close", "High", "Low", "Volume"]]
-
-    # Add an Index column
     df_resampled.insert(0, "", range(1, len(df_resampled) + 1))
-
-    # Save to CSV
     df_resampled.to_csv(output_csv, index=False)
 
-    print(f"Processed data saved to: {output_csv}")
+    print(f"Processed 5-minute OHLC data saved to: {output_csv}")
 
 if __name__ == "__main__":
     # db_info = load_data()
     # connection = create_connection(db_info)
     # data=process_data(get_data_from_db(connection, "2023-01-01", '2023-03-31'))
     # data.to_csv('data.csv')
-    aggregate_to_minutes("data.csv", "dataByMinute.csv")
+    aggregate_to_5_minutes("data.csv", "dataByMinute.csv")
