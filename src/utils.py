@@ -61,7 +61,7 @@ def check_volume_trend(data, direction="LONG"):
     return data['Volume'].iloc[-1] < avg_volume.iloc[-1] * 0.95
 
 
-def detect_trend(data, short_period=10, long_period=30, column='Close'):
+def detect_trend(data, short_period=10, long_period=50, column='Close'):
     ema_short = calculate_ema(data, column, short_period)
     ema_long = calculate_ema(data, column, long_period)
     atr = calculate_atr(data)
@@ -117,7 +117,7 @@ def open_position_type(data, cur_price):
     rsi = calculate_rsi(data, 'Close', 14)
     atr = calculate_atr(data)
     adx = calculate_adx(data)
-    trend_info = detect_trend(data, 8, 21, 'Close')
+    trend_info = detect_trend(data, 10, 30, 'Close')
 
     rsi_lower = 30 + (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
     rsi_upper = 70 - (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
