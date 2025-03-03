@@ -2,9 +2,12 @@ import pandas as pd
 import numpy as np
 import pprint
 from typing import List, Tuple
+from datetime import datetime
 from dotenv import load_dotenv
 import os
 load_dotenv()
+
+from data import get_expiry_date
 
 TAKE_PROFIT_THRES = float(os.getenv("TAKE_PROFIT_THRES")) 
 CUT_LOSS_THRES = int(os.getenv("CUT_LOSS_THRES"))
@@ -83,6 +86,7 @@ def close_positions(cur_price: float, holdings: List[Tuple[str, float]]) -> Tupl
     for position_type, entry_point in holdings:
         pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
         if pnl >= TAKE_PROFIT_THRES or pnl <= CUT_LOSS_THRES:
+            print("Close because of threshold",entry_point, cur_price, pnl) 
             total_realized_pnl += pnl
         else:
             total_unrealized_pnl += pnl
@@ -155,3 +159,12 @@ def close_position_type(data, cur_price, holdings):
     close_long = sum([ema8.iloc[-1] < ema21.iloc[-1], rsi.iloc[-1] > 70, cur_price > ema21.iloc[-1]])
     close_short = sum([ema8.iloc[-1] > ema21.iloc[-1], rsi.iloc[-1] < 30, cur_price < ema8.iloc[-1]])
     return 1 if has_long and close_long >= 2 else 2 if has_short and close_short >= 2 else 0
+
+
+def future_contract_expired(curent_contract, next_contract):
+    curent_date = datetime.strptime(curent_contract["Date"], "%Y-%m-%d")
+    next_date = datetime.strptime(next_contract["Date"], "%Y-%m-%d")
+    
+    if (curent_contract["tickersymbol"] != next_contract["tickersymbol"]):
+        return True
+    return False

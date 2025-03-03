@@ -1,5 +1,5 @@
 from data import get_processed_data
-from utils import close_positions, open_position, open_position_type, close_position_type
+from utils import close_positions, open_position, open_position_type, close_position_type, future_contract_expired
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint
@@ -17,6 +17,19 @@ holdings = []
 
 import pandas as pd
 
+def handle_future_contract_expiry(i, data,holdings, cash, trade_log):
+    if i < len(data) - 2 and future_contract_expired(data.iloc[i+1], data.iloc[i+2]):
+        close_price = data.iloc[i+1]['Close']
+        holdings, realized_pnl, closed_position_type = close_positions(close_price,holdings)
+        realized_pnl *= CONTRACT_SIZE * 1000
+        cash += realized_pnl
+        trade_entry = {
+            "Date": data.iloc[i]["Date"], "Action": "Close", "Position Type": closed_position_type,
+            "Trade Price": close_price, "Total Money": cash
+        }
+        trade_log.append(trade_entry)
+    return holdings, cash
+
 def backtesting(data, holdings=[]):
     cash = INITAL_CAPITAL  
     portfolio_values = []
@@ -26,15 +39,15 @@ def backtesting(data, holdings=[]):
     for i in range(len(data)):
         cur_price = data.iloc[i]['Close']
         trade_entry = {"Date": data.iloc[i]["Date"], "Time": data.iloc[i]["Time"], "Price": cur_price}
-
         # Step 1: Close position if needed
-        if holdings: 
+        if holdings:
             close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
-            if close_action in [1, 2]:
+            if close_action in [1, 2]: 
                 new_holdings, realized_pnl, closed_position_type = close_positions(cur_price, holdings)
                 total_realized_pnl += realized_pnl * CONTRACT_SIZE * 1000
                 cash += realized_pnl * CONTRACT_SIZE * 1000
                 holdings = new_holdings 
+                print(holdings)
                 
             if not holdings:
                 trade_entry.update({
@@ -45,32 +58,21 @@ def backtesting(data, holdings=[]):
                 })
                 trade_log.append(trade_entry) 
             continue  
-
         # Step 2: Check if we can open a position
         open_action = open_position_type(data.iloc[:i+1], cur_price)
-        margin_needed = 0  # chua cap nhat margin
+        margin_needed = MARGIN_REQUIREMENT*cur_price
 
-        if open_action == 1 and cash >= margin_needed:
-            holdings = open_position("LONG", cur_price, holdings)
+        if open_action in [1, 2] and cash >= margin_needed:
+            position_type = "LONG" if open_action == 1 else "SHORT"
+            holdings = open_position(position_type, cur_price, holdings)
             cash -= margin_needed
             trade_entry.update({
-                "Action": "Open",
-                "Position Type": "LONG",
-                "Trade Price": cur_price,
-                "Total Money": cash
-            })
-            trade_log.append(trade_entry) 
-
-        elif open_action == 2 and cash >= margin_needed:
-            holdings = open_position("SHORT", cur_price, holdings)
-            cash -= margin_needed
-            trade_entry.update({
-                "Action": "Open",
-                "Position Type": "SHORT",
-                "Trade Price": cur_price,
-                "Total Money": cash
+                "Action": "Open", "Position Type": position_type,
+                "Trade Price": cur_price, "Total Money": cash
             })
             trade_log.append(trade_entry)
+
+            holdings, cash = handle_future_contract_expiry(i, data, holdings, cash, trade_log)
 
         unrealized_pnl = sum(
             (cur_price - pos[1]) * CONTRACT_SIZE * 1000 if pos[0] == "LONG" else
@@ -85,10 +87,11 @@ def backtesting(data, holdings=[]):
     trade_log_df.to_csv("trade_log.csv", index=False)
 
     return portfolio_values
-
+    
 if __name__ == "__main__":
     data = pd.read_csv('dataByMinute.csv')
     portfolio_values=backtesting(data)
     pprint.pprint(portfolio_values)
     plot_backtesting_results(portfolio_values)
+
 
