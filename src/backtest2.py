@@ -20,12 +20,15 @@ import pandas as pd
 def handle_future_contract_expiry(i, data,holdings, cash, trade_log):
     if i < len(data) - 2 and future_contract_expired(data.iloc[i+1], data.iloc[i+2]):
         close_price = data.iloc[i+1]['Close']
-        holdings, realized_pnl, closed_position_type = close_positions(close_price,holdings)
+        holdings, realized_pnl= close_positions(close_price,holdings)
         realized_pnl *= CONTRACT_SIZE * 1000
         cash += realized_pnl
         trade_entry = {
-            "Date": data.iloc[i]["Date"], "Action": "Close", "Position Type": closed_position_type,
-            "Trade Price": close_price, "Total Money": cash
+            "Date": data.iloc[i]["Date"], 
+            "Action": "Close", 
+            "Position Type": "Expried",
+            "Trade Price": close_price, 
+            "Total Money": cash
         }
         trade_log.append(trade_entry)
     return holdings, cash
@@ -44,36 +47,32 @@ def backtesting(data, holdings=[]):
             close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
             if close_action in [1, 2, 3]: 
                 print("Close position", close_action)
-                new_holdings, realized_pnl = close_positions(cur_price, holdings)
-                total_realized_pnl += realized_pnl * CONTRACT_SIZE * 1000
-                cash += realized_pnl * CONTRACT_SIZE * 1000
+                new_holdings, realized_pnl= close_positions(cur_price, holdings)
+                position_value = realized_pnl * CONTRACT_SIZE * 1000
+                total_realized_pnl += position_value
+                cash += position_value
                 holdings = new_holdings 
-                print(holdings)
-                
-            if not holdings:
                 trade_entry.update({
                     "Action": "Close",
-                    "Position Type": "none",
+                    "Position Type": "None",
                     "Trade Price": cur_price,
                     "Total Money": cash
                 })
                 trade_log.append(trade_entry) 
-            continue  
         # Step 2: Check if we can open a position
         open_action = open_position_type(data.iloc[:i+1], cur_price)
-        margin_needed = MARGIN_REQUIREMENT*cur_price
-
+        margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
+        print("Check margin", margin_needed, cash)
         if open_action in [1, 2] and cash >= margin_needed:
             position_type = "LONG" if open_action == 1 else "SHORT"
             holdings = open_position(position_type, cur_price, holdings)
-            cash -= margin_needed
             trade_entry.update({
                 "Action": "Open", "Position Type": position_type,
                 "Trade Price": cur_price, "Total Money": cash
             })
             trade_log.append(trade_entry)
 
-            holdings, cash = handle_future_contract_expiry(i, data, holdings, cash, trade_log)
+        holdings, cash = handle_future_contract_expiry(i, data, holdings, cash, trade_log)
 
         unrealized_pnl = sum(
             (cur_price - pos[1]) * CONTRACT_SIZE * 1000 if pos[0] == "LONG" else

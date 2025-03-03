@@ -71,29 +71,6 @@ def detect_trend(data, short_period=10, long_period=50, column='Close'):
     sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < atr * 0.2
     return [sideway.iloc[-1], check_volume_trend(data)]
 
-
-def open_position(position_type: str, entry_point: float, holdings: List[Tuple[str, float]]) -> List[Tuple[str, float]]:
-    if position_type not in {"LONG", "SHORT"}:
-        raise ValueError("Invalid position type. Must be 'LONG' or 'SHORT'.")
-    holdings.append((position_type, entry_point))
-    return holdings
-
-
-def close_positions(cur_price: float, holdings: List[Tuple[str, float]]) -> Tuple[List[Tuple[str, float]], float, float]:
-    total_realized_pnl = 0.0
-    total_unrealized_pnl = 0.0
-    new_holdings = []
-    for position_type, entry_point in holdings:
-        pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
-        if pnl >= TAKE_PROFIT_THRES or pnl <= CUT_LOSS_THRES:
-            print("Close because of threshold",entry_point, cur_price, pnl) 
-            total_realized_pnl += pnl
-        else:
-            total_unrealized_pnl += pnl
-            new_holdings.append((position_type, entry_point))
-    return new_holdings, total_realized_pnl, total_unrealized_pnl
-
-
 def calculate_adx(data, period=14):
 
     plus_dm = data['High'].diff()
@@ -112,6 +89,26 @@ def calculate_adx(data, period=14):
     dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
     adx = dx.ewm(alpha=1/period, adjust=False).mean()
     return adx
+
+
+
+#================================================================================================#
+
+def open_position(position_type: str, entry_point: float, holdings: List[Tuple[str, float]]) -> List[Tuple[str, float]]:
+    if position_type not in {"LONG", "SHORT"}:
+        raise ValueError("Invalid position type. Must be 'LONG' or 'SHORT'.")
+    holdings.append((position_type, entry_point))
+    return holdings
+
+
+
+def close_positions(cur_price: float, holdings: List[Tuple[str, float]]) -> Tuple[List[Tuple[str, float]], float, float]:
+    total_realized_pnl = 0.0
+    for position_type, entry_point in holdings:
+        pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
+        total_realized_pnl += pnl
+    return [], total_realized_pnl
+
 
 
 def open_position_type(data, cur_price):
@@ -154,17 +151,31 @@ def close_position_type(data, cur_price, holdings):
     rsi = calculate_rsi(data, 'Close', 14)
     has_long = any(pos[0] == "LONG" for pos in holdings)
     has_short = any(pos[0] == "SHORT" for pos in holdings)
-    
-    
+
+    atr = calculate_atr(data).iloc[-1]
+
     close_long = sum([ema8.iloc[-1] < ema21.iloc[-1], rsi.iloc[-1] > 70, cur_price > ema21.iloc[-1]])
     close_short = sum([ema8.iloc[-1] > ema21.iloc[-1], rsi.iloc[-1] < 30, cur_price < ema8.iloc[-1]])
-    return 1 if has_long and close_long >= 2 else 2 if has_short and close_short >= 2 else 0
+
+
+    for position_type, entry_point in holdings:
+        pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
+        print(f"Checking position {position_type}: Entry {entry_point}, Current {cur_price}, PnL {pnl}")
+        if pnl >= TAKE_PROFIT_THRES or pnl <= CUT_LOSS_THRES:
+            print(f"Closing due to threshold: {position_type} {entry_point} -> {cur_price} (PnL: {pnl})")
+            return 3  # Close immediately if any position hits take profit or cut loss
+
+
+    if has_long and close_long >= 2:
+        return 1  
+    elif has_short and close_short >= 2:
+        return 2  
+    return 0 
 
 
 def future_contract_expired(curent_contract, next_contract):
     curent_date = datetime.strptime(curent_contract["Date"], "%Y-%m-%d")
     next_date = datetime.strptime(next_contract["Date"], "%Y-%m-%d")
-    
     if (curent_contract["tickersymbol"] != next_contract["tickersymbol"]):
         return True
     return False
