@@ -161,7 +161,7 @@ def close_position_type(data, cur_price, holdings):
     for position_type, entry_point in holdings:
         pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
         print(f"Checking position {position_type}: Entry {entry_point}, Current {cur_price}, PnL {pnl}")
-        if pnl >= TAKE_PROFIT_THRES or pnl <= CUT_LOSS_THRES:
+        if pnl >= 1.5* atr or pnl <= -1*atr:
             print(f"Closing due to threshold: {position_type} {entry_point} -> {cur_price} (PnL: {pnl})")
             return 3  # Close immediately if any position hits take profit or cut loss
 
