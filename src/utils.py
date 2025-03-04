@@ -110,11 +110,11 @@ def close_positions(data, cur_price, holdings):
     pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
     # print(f"Closing position {position_type} at {cur_price} (Entry: {entry_price}, PnL: {pnl})")
     atr = calculate_atr(data).iloc[-1]
-    
-    if pnl >= 1.5*atr or pnl <= -1*atr:
-        return (), pnl
-    
-    return holdings, 0
+    # # if pnl >= 1.5*atr or pnl <= -1*atr:
+    # #     return [], pnl
+    # if pnl >= 1.5*atr or pnl <= CUT_LOSS_THRES:
+    #     return [], pnl
+    return [], pnl
 
 
 
@@ -161,11 +161,12 @@ def close_position_type(data, cur_price, holdings):
 
     close_long = sum([ema8.iloc[-1] < ema21.iloc[-1], rsi.iloc[-1] > 70, cur_price > ema21.iloc[-1]])
     close_short = sum([ema8.iloc[-1] > ema21.iloc[-1], rsi.iloc[-1] < 30, cur_price < ema8.iloc[-1]])
-
+    atr = calculate_atr(data).iloc[-1]
     position_type = holdings[3] 
     entry_point = holdings[1] 
     pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
-  
+    if pnl <= -1.5 *atr:
+        return 3
     if has_long and close_long >= 2:
         return 1  
     elif has_short and close_short >= 2:
@@ -173,7 +174,12 @@ def close_position_type(data, cur_price, holdings):
     return 0 
 
 
-def future_contract_expired(holding, next_contract):
+def holding_future_contract_expired(holding, next_contract):
     if (holding[6] != next_contract["tickersymbol"]):
+        return True
+    return False
+
+def future_contract_expired(data, next_contract):
+    if (data["tickersymbol"] != next_contract["tickersymbol"]):
         return True
     return False

@@ -1,5 +1,5 @@
 from data import get_processed_data
-from utils import close_positions, open_position, open_position_type, close_position_type, future_contract_expired
+from utils import close_positions, open_position, open_position_type, close_position_type, holding_future_contract_expired,future_contract_expired
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint
@@ -13,7 +13,7 @@ INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))  # Default to 100M if not fo
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
 
-def future_contract_expired_close(holdings, cur_data, cur_price, trade_entry, trade_log, i, cash=INITAL_CAPITAL):
+def future_contract_expired_close(holdings, cur_price, trade_entry, trade_log, i, cash=INITAL_CAPITAL):
     total_realized_pnl = 0.0
     _, entry_price, _, position_type, _, _ , ticketsymbol= holdings 
     pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
@@ -28,7 +28,7 @@ def future_contract_expired_close(holdings, cur_data, cur_price, trade_entry, tr
             "Total Money": cash
     })
     trade_log.append(trade_entry)
-    return i +1
+    return i +1, []
                       
 def backtesting(data):
     cash = INITAL_CAPITAL
@@ -43,13 +43,15 @@ def backtesting(data):
         trade_entry= {"Date": data.iloc[i]["Date"], 
                       "Time": data.iloc[i]["Time"], 
                       "Price": cur_price}    
+      
         if holdings:
-            close_action = close_position_type(data.iloc[k:i+1], cur_price, holdings) 
-            if  future_contract_expired(holdings, data.iloc[i]):
-                k=future_contract_expired_close(holdings, data.iloc[i], cur_price, trade_entry, trade_log, i, cash)
-                continue
+            close_action = close_position_type(data.iloc[k:i+1], cur_price, holdings)
 
-            if close_action in [1, 2]:
+            if  holding_future_contract_expired(holdings, data.iloc[i]):
+                print("Future contract expired", holdings, data.iloc[i])
+                k, holdings=future_contract_expired_close(holdings, cur_price, trade_entry, trade_log, i, cash)
+                continue
+            if close_action in [1, 2, 3]:
                 # print("Close position", close_action, holdings)
                 new_holdings, realized_pnl = close_positions(data.iloc[k:i+1],cur_price, holdings)
                 position_value = realized_pnl * CONTRACT_SIZE * 1000
@@ -63,10 +65,13 @@ def backtesting(data):
                         "Trade Price": cur_price,
                         "Total Money": cash
                     })
-                    trade_log.append(trade_entry) 
-                trade_log.append(trade_entry)
+                    trade_log.append(trade_entry)
+                continue
+            
+        if i < len(data) - 1 and future_contract_expired(data.iloc[i], data.iloc[i+1]):
+            k=i+1
             continue
-        
+
         open_action = open_position_type(data.iloc[k:i+1], cur_price)
         margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
         if open_action in [1, 2, 3] and cash >= margin_needed:
@@ -86,6 +91,8 @@ def backtesting(data):
             (holdings[1] - cur_price) * CONTRACT_SIZE * 1000
         ) if holdings else 0.0 
 
+          
+       
 
         portfolio_value = cash + unrealized_pnl
         portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
