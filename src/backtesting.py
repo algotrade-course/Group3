@@ -58,19 +58,17 @@ def backtesting(data):
                 total_realized_pnl += position_value
                 cash += position_value
                 holdings = new_holdings
-                if realized_pnl != 0:
-                    trade_entry.update({
-                        "Action": "Close",
-                        "Position Type": "None",
-                        "Trade Price": cur_price,
-                        "Total Money": cash
-                    })
-                    trade_log.append(trade_entry)
+                trade_entry.update({
+                    "Action": "Close",
+                    "Position Type": "None",
+                    "Trade Price": cur_price,
+                    "Total Money": cash
+                })
+                trade_log.append(trade_entry)
+            else:
                 continue
             
-        if i < len(data) - 1 and future_contract_expired(data.iloc[i], data.iloc[i+1]):
-            k=i+1
-            continue
+
 
         open_action = open_position_type(data.iloc[k:i+1], cur_price)
         margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
@@ -92,7 +90,9 @@ def backtesting(data):
         ) if holdings else 0.0 
 
           
-       
+        if i < len(data) - 1 and future_contract_expired(data.iloc[i], data.iloc[i+1]):
+            k=i+1
+            # continue
 
         portfolio_value = cash + unrealized_pnl
         portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
