@@ -72,11 +72,17 @@ def detect_trend(data, short_period=10, long_period=50, column='Close'):
     return [sideway.iloc[-1], check_volume_trend(data)]
 
 def calculate_adx(data, period=14):
+    raw_plus_dm = data['High'].diff()
+    raw_minus_dm = -data['Low'].diff()
 
-    plus_dm = data['High'].diff()
-    minus_dm = -data['Low'].diff()
-    plus_dm[plus_dm < 0] = 0
-    minus_dm[minus_dm < 0] = 0
+    plus_dm = raw_plus_dm.copy()
+    minus_dm = raw_minus_dm.copy()
+
+    plus_condition = (raw_plus_dm > 0) & (raw_plus_dm > raw_minus_dm)
+    minus_condition = (raw_minus_dm > 0) & (raw_minus_dm > raw_plus_dm)
+    
+    plus_dm[~plus_condition] = 0
+    minus_dm[~minus_condition] = 0
 
     tr = pd.concat([
         data['High'] - data['Low'],
@@ -115,8 +121,6 @@ def close_positions(data, cur_price, holdings):
     # if pnl >= 1.5*atr or pnl <= CUT_LOSS_THRES:
     #     return [], pnl
     return [], pnl
-
-
 
 def open_position_type(data, cur_price):
     ema8 = calculate_ema(data, 'Close', 10)
@@ -165,7 +169,7 @@ def close_position_type(data, cur_price, holdings):
     position_type = holdings[3] 
     entry_point = holdings[1] 
     pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
-    if pnl <= -1.5 *atr:
+    if pnl <= -5:
         return 3
     if has_long and close_long >= 2:
         return 1  
