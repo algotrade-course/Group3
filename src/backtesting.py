@@ -30,9 +30,9 @@ def backtesting(data):
                 close_action = close_position_type(data.iloc[i:i+1], cur_price, holdings)  
             else:
                 close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)  
-            if close_action in [1, 2, 3] or future_contract_expired(holdings, data.iloc[i]):
+            if close_action in [1, 2] or future_contract_expired(holdings, data.iloc[i]):
                 # print("Close position", close_action, holdings)
-                new_holdings, realized_pnl = close_positions(cur_price, holdings)
+                new_holdings, realized_pnl = close_positions(data[:i+1], cur_price, holdings)
                 position_value = realized_pnl * CONTRACT_SIZE * 1000
                 total_realized_pnl += position_value
                 cash += position_value
