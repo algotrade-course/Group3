@@ -12,74 +12,59 @@ load_dotenv()
 INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))  # Default to 100M if not found
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
-                           
-holdings = []
-
-import pandas as pd
-
-def handle_future_contract_expiry(i, data,holdings, cash, trade_log):
-    if i < len(data) - 2 and future_contract_expired(data.iloc[i+1], data.iloc[i+2]):
-        close_price = data.iloc[i+1]['Close']
-        holdings, realized_pnl, closed_position_type = close_positions(close_price,holdings)
-        realized_pnl *= CONTRACT_SIZE * 1000
-        cash += realized_pnl
-        trade_entry = {
-            "Date": data.iloc[i]["Date"], "Action": "Close", "Position Type": closed_position_type,
-            "Trade Price": close_price, "Total Money": cash
-        }
-        trade_log.append(trade_entry)
-    return holdings, cash
-
-def backtesting(data, holdings=[]):
-    cash = INITAL_CAPITAL  
+                        
+def backtesting(data):
+    cash = INITAL_CAPITAL
     portfolio_values = []
     total_realized_pnl = 0.0
-    trade_log = [] 
-
+    holdings = []
+    trade_log = []
+    
     for i in range(len(data)):
-        cur_price = data.iloc[i]['Close']
-        trade_entry = {"Date": data.iloc[i]["Date"], "Time": data.iloc[i]["Time"], "Price": cur_price}
-        # Step 1: Close position if needed
+        cur_price=data.iloc[i]['Close']
+        trade_entry= {"Date": data.iloc[i]["Date"], 
+                      "Time": data.iloc[i]["Time"], 
+                      "Price": cur_price}    
         if holdings:
-            close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)
-            if close_action in [1, 2, 3]: 
-                print("Close position", close_action)
+            if future_contract_expired(holdings, data.iloc[i]):  
+                close_action = close_position_type(data.iloc[i:i+1], cur_price, holdings)  
+            else:
+                close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)  
+            if close_action in [1, 2, 3] or future_contract_expired(holdings, data.iloc[i]):
+                # print("Close position", close_action, holdings)
                 new_holdings, realized_pnl = close_positions(cur_price, holdings)
-                total_realized_pnl += realized_pnl * CONTRACT_SIZE * 1000
-                cash += realized_pnl * CONTRACT_SIZE * 1000
+                position_value = realized_pnl * CONTRACT_SIZE * 1000
+                total_realized_pnl += position_value
+                cash += position_value
                 holdings = new_holdings 
-                print(holdings)
-                
-            if not holdings:
                 trade_entry.update({
                     "Action": "Close",
-                    "Position Type": "none",
+                    "Position Type": "None",
                     "Trade Price": cur_price,
                     "Total Money": cash
                 })
-                trade_log.append(trade_entry) 
-            continue  
-        # Step 2: Check if we can open a position
+                trade_log.append(trade_entry)
+            continue
+        
         open_action = open_position_type(data.iloc[:i+1], cur_price)
-        margin_needed = MARGIN_REQUIREMENT*cur_price
-
+        margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
         if open_action in [1, 2] and cash >= margin_needed:
             position_type = "LONG" if open_action == 1 else "SHORT"
-            holdings = open_position(position_type, cur_price, holdings)
-            cash -= margin_needed
+            holdings = open_position(position_type, cur_price, holdings,data.iloc[i], cash)
+            # print("Check holdings", holdings)
             trade_entry.update({
-                "Action": "Open", "Position Type": position_type,
-                "Trade Price": cur_price, "Total Money": cash
+                "Action": "Open", 
+                "Position Type": position_type,
+                "Trade Price": cur_price, 
+                "Total Money": cash
             })
             trade_log.append(trade_entry)
+               
+        unrealized_pnl = (
+            (cur_price - holdings[1]) * CONTRACT_SIZE * 1000 if holdings[3] == "LONG" else
+            (holdings[1] - cur_price) * CONTRACT_SIZE * 1000
+        ) if holdings else 0.0 
 
-            holdings, cash = handle_future_contract_expiry(i, data, holdings, cash, trade_log)
-
-        unrealized_pnl = sum(
-            (cur_price - pos[1]) * CONTRACT_SIZE * 1000 if pos[0] == "LONG" else
-            (pos[1] - cur_price) * CONTRACT_SIZE * 1000
-            for pos in holdings
-        )
 
         portfolio_value = cash + unrealized_pnl
         portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
@@ -88,11 +73,9 @@ def backtesting(data, holdings=[]):
     trade_log_df.to_csv("trade_log.csv", index=False)
 
     return portfolio_values
-    
+
 if __name__ == "__main__":
     data = pd.read_csv('dataByMinute.csv')
     portfolio_values=backtesting(data)
     # pprint.pprint(portfolio_values)
     plot_backtesting_results(portfolio_values)
-
-
