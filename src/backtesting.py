@@ -12,13 +12,31 @@ load_dotenv()
 INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))  # Default to 100M if not found
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
-                        
+
+def future_contract_expired_close(holdings, cur_data, cur_price, trade_entry, trade_log, i, cash=INITAL_CAPITAL):
+    total_realized_pnl = 0.0
+    _, entry_price, _, position_type, _, _ , ticketsymbol= holdings 
+    pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
+    position_value = pnl * CONTRACT_SIZE * 1000
+    total_realized_pnl += position_value
+    cash += position_value
+    holdings = []
+    trade_entry.update({
+            "Action": "Close",
+            "Position Type": "None",
+            "Trade Price": cur_price,
+            "Total Money": cash
+    })
+    trade_log.append(trade_entry)
+    return i +1
+                      
 def backtesting(data):
     cash = INITAL_CAPITAL
     portfolio_values = []
     total_realized_pnl = 0.0
     holdings = []
     trade_log = []
+    k=0
     
     for i in range(len(data)):
         cur_price=data.iloc[i]['Close']
@@ -26,29 +44,32 @@ def backtesting(data):
                       "Time": data.iloc[i]["Time"], 
                       "Price": cur_price}    
         if holdings:
-            if future_contract_expired(holdings, data.iloc[i]):  
-                close_action = close_position_type(data.iloc[i:i+1], cur_price, holdings)  
-            else:
-                close_action = close_position_type(data.iloc[:i+1], cur_price, holdings)  
-            if close_action in [1, 2] or future_contract_expired(holdings, data.iloc[i]):
+            close_action = close_position_type(data.iloc[k:i+1], cur_price, holdings) 
+            if  future_contract_expired(holdings, data.iloc[i]):
+                k=future_contract_expired_close(holdings, data.iloc[i], cur_price, trade_entry, trade_log, i, cash)
+                continue
+
+            if close_action in [1, 2]:
                 # print("Close position", close_action, holdings)
-                new_holdings, realized_pnl = close_positions(data[:i+1], cur_price, holdings)
+                new_holdings, realized_pnl = close_positions(data.iloc[k:i+1],cur_price, holdings)
                 position_value = realized_pnl * CONTRACT_SIZE * 1000
                 total_realized_pnl += position_value
                 cash += position_value
-                holdings = new_holdings 
-                trade_entry.update({
-                    "Action": "Close",
-                    "Position Type": "None",
-                    "Trade Price": cur_price,
-                    "Total Money": cash
-                })
+                holdings = new_holdings
+                if realized_pnl != 0:
+                    trade_entry.update({
+                        "Action": "Close",
+                        "Position Type": "None",
+                        "Trade Price": cur_price,
+                        "Total Money": cash
+                    })
+                    trade_log.append(trade_entry) 
                 trade_log.append(trade_entry)
             continue
         
-        open_action = open_position_type(data.iloc[:i+1], cur_price)
+        open_action = open_position_type(data.iloc[k:i+1], cur_price)
         margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
-        if open_action in [1, 2] and cash >= margin_needed:
+        if open_action in [1, 2, 3] and cash >= margin_needed:
             position_type = "LONG" if open_action == 1 else "SHORT"
             holdings = open_position(position_type, cur_price, holdings,data.iloc[i], cash)
             # print("Check holdings", holdings)
