@@ -120,7 +120,12 @@ def close_positions(data, cur_price, holdings):
     # #     return [], pnl
     # if pnl >= 1.5*atr or pnl <= CUT_LOSS_THRES:
     #     return [], pnl
-    return [], pnl
+    return [], round(pnl,3)
+
+def calculate_pnl_after_fee(pnl, contract_size=1000):
+    profit_after_fee = pnl-0.47
+    profit_in_cash=profit_after_fee*contract_size*1000
+    return profit_in_cash
 
 def open_position_type(data, cur_price):
     ema8 = calculate_ema(data, 'Close', 10)
@@ -185,5 +190,12 @@ def holding_future_contract_expired(holding, next_contract):
 
 def future_contract_expired(data, next_contract):
     if (data["tickersymbol"] != next_contract["tickersymbol"]):
+        return True
+    return False
+
+def check_margin_ratio(cash, cur_price, margin_requierment, contract_size,volume=1):
+    price_with_margin = margin_requierment * cur_price * 1000 * volume* contract_size
+    account_ration=price_with_margin/0.8
+    if cash >= account_ration:
         return True
     return False

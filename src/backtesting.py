@@ -1,5 +1,5 @@
 from data import get_processed_data
-from utils import close_positions, open_position, open_position_type, close_position_type, holding_future_contract_expired,future_contract_expired
+from utils import close_positions, open_position, open_position_type, close_position_type, holding_future_contract_expired,future_contract_expired, calculate_pnl_after_fee, check_margin_ratio
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint
@@ -17,15 +17,16 @@ def future_contract_expired_close(holdings, cur_price, trade_entry, trade_log, i
     total_realized_pnl = 0.0
     _, entry_price, _, position_type, _, _ , ticketsymbol= holdings 
     pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
-    position_value = pnl * CONTRACT_SIZE * 1000
-    total_realized_pnl += position_value
-    cash += position_value
+    value_in_cash = calculate_pnl_after_fee(pnl)
+    total_realized_pnl += pnl
+    cash += value_in_cash
     holdings = []
     trade_entry.update({
-            "Action": "Close",
+            "Action": "Close_Future_Expired",
             "Position Type": "None",
             "Trade Price": cur_price,
-            "Total Money": cash
+            "Total Money": cash,
+            "Total Point": total_realized_pnl
     })
     trade_log.append(trade_entry)
     return i +1, []
@@ -54,15 +55,16 @@ def backtesting(data):
             if close_action in [1, 2, 3]:
                 # print("Close position", close_action, holdings)
                 new_holdings, realized_pnl = close_positions(data.iloc[k:i+1],cur_price, holdings)
-                position_value = realized_pnl * CONTRACT_SIZE * 1000
-                total_realized_pnl += position_value
-                cash += position_value
+                value_in_cash = calculate_pnl_after_fee(realized_pnl)
+                total_realized_pnl += realized_pnl
+                cash += value_in_cash
                 holdings = new_holdings
                 trade_entry.update({
                     "Action": "Close",
                     "Position Type": "None",
                     "Trade Price": cur_price,
-                    "Total Money": cash
+                    "Total Money": cash,
+                    "Total Point": total_realized_pnl
                 })
                 trade_log.append(trade_entry)
             else:
@@ -71,8 +73,7 @@ def backtesting(data):
 
 
         open_action = open_position_type(data.iloc[k:i+1], cur_price)
-        margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
-        if open_action in [1, 2, 3] and cash >= margin_needed:
+        if open_action in [1, 2, 3] and check_margin_ratio(cash, cur_price, MARGIN_REQUIREMENT,CONTRACT_SIZE,1):
             position_type = "LONG" if open_action == 1 else "SHORT"
             holdings = open_position(position_type, cur_price, holdings,data.iloc[i], cash)
             # print("Check holdings", holdings)
