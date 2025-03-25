@@ -105,7 +105,7 @@ def calculate_adx(data, period=14):
 def open_position(position_type, entry_point, holdings, data, cash):
     if position_type not in {"LONG", "SHORT"}:
         raise ValueError("Invalid position type. Must be 'LONG' or 'SHORT'.")
-    holdings = (data['Date'], entry_point, "OPEN", position_type, entry_point,cash, data['tickersymbol'])
+    holdings = (data['Date'], entry_point, "OPEN", position_type, entry_point, cash, data['tickersymbol'])
     return holdings
 
 
@@ -122,8 +122,8 @@ def close_positions(data, cur_price, holdings):
     #     return [], pnl
     return [], round(pnl,3)
 
-def calculate_pnl_after_fee(pnl, contract_size=1000):
-    profit_after_fee = pnl-0.47
+def calculate_pnl_after_fee(pnl, contract_size=100):
+    profit_after_fee = pnl - 0.47
     profit_in_cash=profit_after_fee*contract_size*1000
     return profit_in_cash
 
@@ -173,15 +173,17 @@ def close_position_type(data, cur_price, holdings):
     atr = calculate_atr(data).iloc[-1]
     position_type = holdings[3] 
     entry_point = holdings[1] 
-    pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
+    pnl = ((cur_price - entry_point)) if position_type == "LONG" else ((entry_point - cur_price))
+    
+    atr_stop_loss = 1.5 * atr  # Adjust multiplier based on testing
+    
     if pnl <= -5:
         return 3
-    if has_long and close_long >= 2:
+    if has_long and close_long >= 2 and pnl >= 0.47:
         return 1  
-    elif has_short and close_short >= 2:
+    elif has_short and close_short >= 2 and pnl >= 0.47:
         return 2  
     return 0 
-
 
 def holding_future_contract_expired(holding, next_contract):
     if (holding[6] != next_contract["tickersymbol"]):
@@ -194,8 +196,12 @@ def future_contract_expired(data, next_contract):
     return False
 
 def check_margin_ratio(cash, cur_price, margin_requierment, contract_size,volume=1):
-    price_with_margin = margin_requierment * cur_price * 1000 * volume* contract_size
+    price_with_margin = margin_requierment * cur_price * 1000 * volume * contract_size
     account_ration=price_with_margin/0.8
-    if cash >= account_ration:
-        return True
-    return False
+    return cash >= account_ration
+
+def is_next_day(data, index):
+    return (data.iloc[index]["Time"] == "14:27:00") or (data.iloc[index+1]["Time"] == "09:00:00")
+
+# def is_next_session(data, index):
+#     return (data.iloc[index]["Time"] == "11:27:00") or (data.iloc[index+1]["Time"] == "13:00:00")
