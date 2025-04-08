@@ -9,7 +9,7 @@ load_dotenv()
 
 from data import get_expiry_date
 
-TAKE_PROFIT_THRES = float(os.getenv("TAKE_PROFIT_THRES")) 
+TAKE_PROFIT_THRES = float(os.getenv("TAKE_PROFIT_THRES"))
 CUT_LOSS_THRES = int(os.getenv("CUT_LOSS_THRES"))
 
 
@@ -58,7 +58,7 @@ def calculate_atr(data, period=14):
 #     return data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.0
 
 def check_volume_trend(data, direction="LONG"):
-    avg_volume = data['Volume'].rolling(15).mean() 
+    avg_volume = data['Volume'].rolling(15).mean()
     if direction == "LONG":
         return data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.05
     return data['Volume'].iloc[-1] < avg_volume.iloc[-1] * 0.95
@@ -80,7 +80,7 @@ def calculate_adx(data, period=14):
 
     plus_condition = (raw_plus_dm > 0) & (raw_plus_dm > raw_minus_dm)
     minus_condition = (raw_minus_dm > 0) & (raw_minus_dm > raw_plus_dm)
-    
+
     plus_dm[~plus_condition] = 0
     minus_dm[~minus_condition] = 0
 
@@ -112,7 +112,7 @@ def open_position(position_type, entry_point, holdings, data, cash):
 
 def close_positions(data, cur_price, holdings):
     total_realized_pnl = 0.0
-    _, entry_price, _, position_type, _, _ , ticketsymbol= holdings 
+    _, entry_price, _, position_type, _, _ , ticketsymbol= holdings
     pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
     # print(f"Closing position {position_type} at {cur_price} (Entry: {entry_price}, PnL: {pnl})")
     atr = calculate_atr(data).iloc[-1]
@@ -127,11 +127,11 @@ def calculate_pnl_after_fee(pnl, contract_size=100):
     profit_in_cash=profit_after_fee*contract_size*1000
     return profit_in_cash
 
-def open_position_type(data, cur_price):
-    ema8 = calculate_ema(data, 'Close', 10)
-    ema21 = calculate_ema(data, 'Close', 30)
+def open_position_type(data, cur_price, ema_periods, rsi_period):
+    ema8 = calculate_ema(data, 'Close',  ema_periods[0])
+    ema21 = calculate_ema(data, 'Close',  ema_periods[1])
     vwap = calculate_vwap(data)
-    rsi = calculate_rsi(data, 'Close', 14)
+    rsi = calculate_rsi(data, 'Close', rsi_period)
     atr = calculate_atr(data)
     adx = calculate_adx(data)
     trend_info = detect_trend(data, 10, 30, 'Close')
@@ -140,50 +140,62 @@ def open_position_type(data, cur_price):
     rsi_upper = 70 - (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
 
     if (trend_info[0]  or pd.isna(rsi.iloc[-1]) or not (rsi_lower < rsi.iloc[-1] < rsi_upper) or adx.iloc[-1] < 30):
-        return 0  
+        return 0
 
     long_criteria = sum([
-        ema8.iloc[-1] > ema21.iloc[-1],  
-        cur_price > vwap,  
-        rsi_lower < rsi.iloc[-1] < rsi_upper,  
-        trend_info[1], 
-        adx.iloc[-1] > 30  
+        ema8.iloc[-1] > ema21.iloc[-1],
+        cur_price > vwap,
+        rsi_lower < rsi.iloc[-1] < rsi_upper,
+        trend_info[1],
+        adx.iloc[-1] > 30
     ])
 
     short_criteria = sum([
-        ema8.iloc[-1] < ema21.iloc[-1],  
-        cur_price < vwap,  
-        rsi_lower < rsi.iloc[-1] < rsi_upper, 
+        ema8.iloc[-1] < ema21.iloc[-1],
+        cur_price < vwap,
+        rsi_lower < rsi.iloc[-1] < rsi_upper,
         not trend_info[1],
-        adx.iloc[-1] > 30 
+        adx.iloc[-1] > 30
     ])
 
     return 1 if long_criteria >= 3 else 2 if short_criteria >= 3 else 0
 
 
-def close_position_type(data, cur_price, holdings):
-    ema8 = calculate_ema(data, 'Close', 10)
-    ema21 = calculate_ema(data, 'Close', 30)
-    rsi = calculate_rsi(data, 'Close', 14)
+def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
+    ema8 = calculate_ema(data, 'Close', ema_periods[0])
+    ema21 = calculate_ema(data, 'Close', ema_periods[1])
+    rsi = calculate_rsi(data, 'Close', rsi_period)
+    atr = calculate_atr(data).iloc[-1]
+
     has_long = holdings[3] == "LONG" if holdings else False
     has_short = holdings[3] == "SHORT" if holdings else False
 
-    close_long = sum([ema8.iloc[-1] < ema21.iloc[-1], rsi.iloc[-1] > 70, cur_price > ema21.iloc[-1]])
-    close_short = sum([ema8.iloc[-1] > ema21.iloc[-1], rsi.iloc[-1] < 30, cur_price < ema8.iloc[-1]])
-    atr = calculate_atr(data).iloc[-1]
-    position_type = holdings[3] 
-    entry_point = holdings[1] 
-    pnl = ((cur_price - entry_point)) if position_type == "LONG" else ((entry_point - cur_price))
-    
-    atr_stop_loss = 1.5 * atr  # Adjust multiplier based on testing
-    
+    close_long = sum([
+        ema8.iloc[-1] < ema21.iloc[-1],
+        rsi.iloc[-1] > 70,
+        cur_price > ema21.iloc[-1]
+    ])
+
+    close_short = sum([
+        ema8.iloc[-1] > ema21.iloc[-1],
+        rsi.iloc[-1] < 30,
+        cur_price < ema8.iloc[-1]
+    ])
+
+    position_type = holdings[3]
+    entry_point = holdings[1]
+    pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
+
+    atr_stop_loss = 1.5 * atr  # This isn't used, but may be useful later
+
     if pnl <= -5:
         return 3
     if has_long and close_long >= 2 and pnl >= 0.47:
-        return 1  
+        return 1
     elif has_short and close_short >= 2 and pnl >= 0.47:
-        return 2  
-    return 0 
+        return 2
+    return 0
+
 
 def holding_future_contract_expired(holding, next_contract):
     if (holding[6] != next_contract["tickersymbol"]):

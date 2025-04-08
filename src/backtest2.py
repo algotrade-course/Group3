@@ -12,7 +12,7 @@ load_dotenv()
 INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))  # Default to 100M if not found
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
-                           
+
 holdings = []
 
 import pandas as pd
@@ -24,10 +24,10 @@ def handle_future_contract_expiry(i, data,holdings, cash, trade_log,k):
         realized_pnl *= CONTRACT_SIZE * 1000
         cash += realized_pnl
         trade_entry = {
-            "Date": data.iloc[i]["Date"], 
-            "Action": "Close", 
+            "Date": data.iloc[i]["Date"],
+            "Action": "Close",
             "Position Type": "Expried",
-            "Trade Price": close_price, 
+            "Trade Price": close_price,
             "Total Money": cash
         }
         trade_log.append(trade_entry)
@@ -35,10 +35,10 @@ def handle_future_contract_expiry(i, data,holdings, cash, trade_log,k):
     return holdings, cash,k
 
 def backtesting(data, holdings=[]):
-    cash = INITAL_CAPITAL  
+    cash = INITAL_CAPITAL
     portfolio_values = []
     total_realized_pnl = 0.0
-    trade_log = [] 
+    trade_log = []
     k=0
     for i in range(len(data)):
         cur_price = data.iloc[i]['Close']
@@ -46,20 +46,20 @@ def backtesting(data, holdings=[]):
         # Step 1: Close position if needed
         if holdings:
             close_action = close_position_type(data.iloc[k:i+1], cur_price, holdings)
-            if close_action in [1,2,3]: 
+            if close_action in [1,2,3]:
                 # print("Close position", close_action)
                 new_holdings, realized_pnl= close_positions(cur_price, holdings)
                 position_value = realized_pnl * CONTRACT_SIZE * 1000
                 total_realized_pnl += position_value
                 cash += position_value
-                holdings = new_holdings 
+                holdings = new_holdings
                 trade_entry.update({
                     "Action": "Close",
                     "Position Type": "None",
                     "Trade Price": cur_price,
                     "Total Money": cash
                 })
-                trade_log.append(trade_entry) 
+                trade_log.append(trade_entry)
         # Step 2: Check if we can open a position
         open_action = open_position_type(data.iloc[k:i+1], cur_price)
         margin_needed = MARGIN_REQUIREMENT * cur_price * 1000
@@ -88,7 +88,7 @@ def backtesting(data, holdings=[]):
     trade_log_df.to_csv("trade_log.csv", index=False)
 
     return portfolio_values
-    
+
 if __name__ == "__main__":
     data = pd.read_csv('dataByMinute.csv')
     portfolio_values=backtesting(data)
