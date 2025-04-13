@@ -107,7 +107,10 @@ def backtesting(data, ema_periods, rsi_period):
     return portfolio_values_df, trade_log_df
 
 if __name__ == "__main__":
-    data = pd.read_csv('dataByMinute1.csv')
+    data = pd.read_csv('dataByMinute.csv') # Data 2023
+    # data = pd.read_csv("outsample_data_2024_dataByMinute.csv") # Data 2024
+    # data = pd.read_csv('outsample_dataByMinute.csv') # Data 2025
+    
     df_ema_rsi = pd.read_csv('ema_rsi.csv')
 
     for index, row in df_ema_rsi.iterrows():
@@ -117,8 +120,8 @@ if __name__ == "__main__":
         portfolio_values, trade_log_df = backtesting(data, ema_periods, rsi_period)
         ema_str = f"{ema_periods[0]}_{ema_periods[1]}"
         rsi_str = str(rsi_period)
-        trade_log_df.to_csv(f"result/trade_logBy1_{ema_str}_{rsi_str}.csv", index=False)
-        portfolio_values.to_csv(f"result/portfolio_valuesBy1_{ema_str}_{rsi_str}.csv", index=False)
+        trade_log_df.to_csv(f"result/trade_log_{ema_str}_{rsi_str}.csv", index=False)
+        portfolio_values.to_csv(f"result/portfolio_values_{ema_str}_{rsi_str}.csv", index=False)
 
     plot_all_portfolio_results(result_dir="result", output_file="result/plot/all_backtestsBy1.png")
 

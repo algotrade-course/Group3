@@ -166,6 +166,6 @@ def aggregate_to_5_minutes(input_csv, output_csv):
 if __name__ == "__main__":
     db_info = load_data()
     connection = create_connection(db_info)
-    data=process_data(get_data_from_db(connection, "2023-01-01", '2023-12-31'))
-    data.to_csv('data.csv')
-    aggregate_to_5_minutes("data.csv", "dataByMinute.csv")
+    data=process_data(get_data_from_db(connection, "2024-01-01", '2025-01-01'))
+    data.to_csv('outsample_data_2024.csv')
+    aggregate_to_5_minutes("outsample_data_2024.csv", "outsample_data_2024_dataByMinute.csv")

@@ -17,7 +17,7 @@ def calculate_ema(df, column, period):
     return df[column].ewm(span=period, adjust=False).mean()
 
 
-def calculate_rsi(df, column='Close', period=14):
+def calculate_rsi(df, column='Close', period=9):
     delta = df[column].diff().to_numpy()
     gain = np.where(delta > 0, delta, 0)
     loss = np.where(delta < 0, -delta, 0)
@@ -127,73 +127,212 @@ def calculate_pnl_after_fee(pnl, contract_size=100):
     profit_in_cash=profit_after_fee*contract_size*1000
     return profit_in_cash
 
+# def open_position_type(data, cur_price, ema_periods, rsi_period):
+#     """
+#     Determines whether to open a long (1), short (2), or no position (0) based on weighted criteria.
+    
+#     Assumes the following helper functions are defined:
+#       - calculate_ema(data, column, period)
+#       - calculate_vwap(data)
+#       - calculate_rsi(data, column, period)
+#       - calculate_atr(data)
+#       - calculate_adx(data)
+#       - detect_trend(data, fast_period, slow_period, column)
+      
+#     Returns:
+#       1: Long signal
+#       2: Short signal
+#       0: No signal / Hold
+#     """
+#     # Calculate technical indicators.
+#     ema8   = calculate_ema(data, 'Close', ema_periods[0])
+#     ema21  = calculate_ema(data, 'Close', ema_periods[1])
+#     vwap   = calculate_vwap(data)
+#     rsi    = calculate_rsi(data, 'Close', rsi_period)
+#     atr    = calculate_atr(data)
+#     adx    = calculate_adx(data)
+#     trend_info = detect_trend(data, 10, 30, 'Close')  # trend_info[0]: avoid signal flag, trend_info[1]: bullish flag
+
+#     rsi_lower = 30 + (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
+#     rsi_upper = 70 - (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
+
+#     if pd.isna(rsi.iloc[-1]) or not (rsi_lower < rsi.iloc[-1] < rsi_upper) or adx.iloc[-1] < 30 or trend_info[0]:
+#         return 0
+
+#     weights = {
+#         'ema':   1.0,   
+#         'vwap':  0.5,   
+#         'rsi':   0.7,  
+#         'trend': 1.0,   
+#     }
+    
+#     long_score = 0.0
+#     short_score = 0.0
+
+#     if ema8.iloc[-1] > ema21.iloc[-1]:
+#         long_score += weights['ema']
+#     else:
+#         short_score += weights['ema']
+
+#     if cur_price > vwap:
+#         long_score += weights['vwap']
+#     else:
+#         short_score += weights['vwap']
+
+#     mid_rsi = (rsi_lower + rsi_upper) / 2
+#     if rsi.iloc[-1] < mid_rsi:
+#         long_score += weights['rsi']
+#     else:
+#         short_score += weights['rsi']
+
+#     if trend_info[1]:
+#         long_score += weights['trend']
+#     else:
+#         short_score += weights['trend']
+        
+#     threshold = 1.5
+
+#     if long_score > short_score and long_score >= 1.5:
+#         return 1 
+#     elif short_score > long_score and short_score >= 1.5:
+#         return 2  
+#     else:
+#         return 0 
+
 def open_position_type(data, cur_price, ema_periods, rsi_period):
-    ema8 = calculate_ema(data, 'Close',  ema_periods[0])
-    ema21 = calculate_ema(data, 'Close',  ema_periods[1])
-    vwap = calculate_vwap(data)
+    ema10 = calculate_ema(data, 'Close', ema_periods[0])
+    ema30 = calculate_ema(data, 'Close', ema_periods[1])
     rsi = calculate_rsi(data, 'Close', rsi_period)
-    atr = calculate_atr(data)
-    adx = calculate_adx(data)
-    trend_info = detect_trend(data, 10, 30, 'Close')
 
-    rsi_lower = 30 + (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
-    rsi_upper = 70 - (10 * (atr.iloc[-1] / data['Close'].iloc[-1]))
+    if pd.isna(rsi.iloc[-1]) or pd.isna(ema10.iloc[-1]) or pd.isna(ema30.iloc[-1]):
+        return 0  # not enough data
 
-    if (trend_info[0]  or pd.isna(rsi.iloc[-1]) or not (rsi_lower < rsi.iloc[-1] < rsi_upper) or adx.iloc[-1] < 30):
-        return 0
+    current_vol = data['Volume'].iloc[-1]
+    avg_vol = data['Volume'].rolling(window=10).mean().iloc[-1]
 
-    long_criteria = sum([
-        ema8.iloc[-1] > ema21.iloc[-1],
-        cur_price > vwap,
-        rsi_lower < rsi.iloc[-1] < rsi_upper,
-        trend_info[1],
-        adx.iloc[-1] > 30
-    ])
+    # Trend and momentum confirmation
+    long_trend = ema10.iloc[-1] > ema30.iloc[-1] and cur_price > ema10.iloc[-1] and rsi.iloc[-1] > 55
+    short_trend = ema10.iloc[-1] < ema30.iloc[-1] and cur_price < ema10.iloc[-1] and rsi.iloc[-1] < 45
+    strong_volume = current_vol > 1.2 * avg_vol
 
-    short_criteria = sum([
-        ema8.iloc[-1] < ema21.iloc[-1],
-        cur_price < vwap,
-        rsi_lower < rsi.iloc[-1] < rsi_upper,
-        not trend_info[1],
-        adx.iloc[-1] > 30
-    ])
-
-    return 1 if long_criteria >= 3 else 2 if short_criteria >= 3 else 0
+    if long_trend and strong_volume:
+        return 1  # Long
+    elif short_trend and strong_volume:
+        return 2  # Short
+    else:
+        return 0  # Do nthing
 
 
+# def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
+#     ema8 = calculate_ema(data, 'Close', ema_periods[0])
+#     ema21 = calculate_ema(data, 'Close', ema_periods[1])
+#     rsi = calculate_rsi(data, 'Close', rsi_period)
+#     atr = calculate_atr(data).iloc[-1]
+
+#     if not holdings or len(holdings) < 4:
+#         return 0
+
+#     has_long = holdings[3] == "LONG"
+#     has_short = holdings[3] == "SHORT"
+
+#     weights = {
+#         'ema_rev': 1.0,   
+#         'rsi': 0.8,       
+#         'price_ema': 0.6   
+#     }
+    
+#     exit_score = 0.0
+
+#     if has_long:
+#         if ema8.iloc[-1] < ema21.iloc[-1]:  
+#             exit_score += weights['ema_rev']
+#         if rsi.iloc[-1] > 70:                
+#             exit_score += weights['rsi']
+#         if cur_price > ema21.iloc[-1]:        
+#             exit_score += weights['price_ema']
+    
+#     if has_short:
+#         if ema8.iloc[-1] > ema21.iloc[-1]:
+#             exit_score += weights['ema_rev']
+#         if rsi.iloc[-1] < 30:
+#             exit_score += weights['rsi']
+#         if cur_price < ema8.iloc[-1]:
+#             exit_score += weights['price_ema']
+
+#     position_type = holdings[3]
+#     entry_point = holdings[1]
+#     pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
+#     atr_stop_loss = 1.5 * atr
+
+#     if has_long and cur_price < ema21.iloc[-1] * 0.98:
+#         return 3
+#     if has_short and cur_price > ema8.iloc[-1] * 1.02:
+#         return 3
+#     if pnl <= -atr_stop_loss or pnl >= 5:
+#         return 3
+#     threshold = 1.5 
+
+#     if exit_score >= threshold and pnl >= 0.47:
+#         # Return 1 for long exit, 2 for short exit based on position type
+#         return 1 if has_long else 2
+    
+#     return 0
 def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
-    ema8 = calculate_ema(data, 'Close', ema_periods[0])
-    ema21 = calculate_ema(data, 'Close', ema_periods[1])
+    ema10 = calculate_ema(data, 'Close', ema_periods[0])
+    ema30 = calculate_ema(data, 'Close', ema_periods[1])
     rsi = calculate_rsi(data, 'Close', rsi_period)
     atr = calculate_atr(data).iloc[-1]
+    
+    if pd.isna(rsi.iloc[-1]) or pd.isna(ema10.iloc[-1]) or pd.isna(ema30.iloc[-1]):
+        return 0
+    
+    if not holdings or len(holdings) < 4:
+        return 0
+    
+    entry_price = holdings[1]
+    position_type = holdings[3].upper()
+    
+    # Configurable thresholds
+    max_loss = 3.0
+    min_profit = 0.5
+    atr_multiplier = 1.5
 
-    has_long = holdings[3] == "LONG" if holdings else False
-    has_short = holdings[3] == "SHORT" if holdings else False
+    if position_type == "LONG":
+        pnl = cur_price - entry_price
 
-    close_long = sum([
-        ema8.iloc[-1] < ema21.iloc[-1],
-        rsi.iloc[-1] > 70,
-        cur_price > ema21.iloc[-1]
-    ])
+        # CUt loss
+        if pnl <= -max_loss:
+            return 1
+        
+        # Strong revErsal signal: price below EMA30 and RSI < 50
+        if cur_price < ema30.iloc[-1] and rsi.iloc[-1] < 50:
+            return 1
 
-    close_short = sum([
-        ema8.iloc[-1] > ema21.iloc[-1],
-        rsi.iloc[-1] < 30,
-        cur_price < ema8.iloc[-1]
-    ])
+        # Trailing stop if profitable
+        if pnl > min_profit:
+            trailing_stop = max(entry_price + min_profit, data['Close'].iloc[-2] - atr * atr_multiplier)
+            if cur_price < trailing_stop:
+                return 1
 
-    position_type = holdings[3]
-    entry_point = holdings[1]
-    pnl = (cur_price - entry_point) if position_type == "LONG" else (entry_point - cur_price)
+        return 0
 
-    atr_stop_loss = 1.5 * atr  # This isn't used, but may be useful later
+    elif position_type == "SHORT":
+        pnl = entry_price - cur_price
 
-    if pnl <= -5:
-        return 3
-    if has_long and close_long >= 2 and pnl >= 0.47:
-        return 1
-    elif has_short and close_short >= 2 and pnl >= 0.47:
-        return 2
+        if pnl <= -max_loss:
+            return 2
+
+        # Strong reversal signal: price above EMA30 and RSI > 50
+        if cur_price > ema30.iloc[-1] and rsi.iloc[-1] > 50:
+            return 2
+
+        if pnl > min_profit:
+            trailing_stop = min(entry_price - min_profit, data['Close'].iloc[-2] + atr * atr_multiplier)
+            if cur_price > trailing_stop:
+                return 2
+
+        return 0
+
     return 0
 
 
