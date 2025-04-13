@@ -1,0 +1,9 @@
+{
+	"bootstrap_servers": [
+		"api.algotrade.vn:9093"
+	],
+	"security_protocol": "SASL_PLAINTEXT",
+	"sasl_mechanism": "PLAIN",
+	"sasl_plain_username": "consumer",
+	"sasl_plain_password": "9psL289uMFRC"
+}

@@ -1,19 +1,21 @@
-from data import get_processed_data
-from utils import close_positions, open_position, open_position_type, is_next_day, close_position_type, holding_future_contract_expired, calculate_pnl_after_fee, check_margin_ratio
-import numpy as np
-import matplotlib.pyplot as plt
-import pprint
+import os
 import pandas as pd
 from dotenv import load_dotenv
-from evaluation2 import plot_backtesting_results, plot_all_portfolio_results
-import os
+from utils import (
+    close_positions, open_position, open_position_type, is_next_day, 
+    close_position_type, holding_future_contract_expired, 
+    calculate_pnl_after_fee, check_margin_ratio
+)
+from evaluation import plot_all_portfolio_results
+import argparse
 load_dotenv()
 
-INITAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))
+INITIAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
 
-def future_contract_expired_close(holdings, cur_price, i, cash=INITAL_CAPITAL):
+
+def future_contract_expired_close(holdings, cur_price, i, cash=INITIAL_CAPITAL):
     total_realized_pnl = 0.0
     _, entry_price, _, position_type, _, _ , ticketsymbol= holdings
     pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
@@ -24,7 +26,7 @@ def future_contract_expired_close(holdings, cur_price, i, cash=INITAL_CAPITAL):
     return i + 1, [], total_realized_pnl, cash
 
 def backtesting(data, ema_periods, rsi_period):
-    cash = INITAL_CAPITAL
+    cash = INITIAL_CAPITAL
     portfolio_values = []
     total_realized_pnl = 0.0
     holdings = []
@@ -71,13 +73,6 @@ def backtesting(data, ema_periods, rsi_period):
                     "Total Point": total_realized_pnl
                 }
                 trade_log.append(log)
-                # if close_action == 3:
-                #     if pos_type == "LONG":
-                #         is_reverse = 1
-                #     else:
-                #         is_reverse = 2
-                # else:
-                #     is_reverse = 0
 
             else:
                 continue
@@ -106,22 +101,43 @@ def backtesting(data, ema_periods, rsi_period):
 
     return portfolio_values_df, trade_log_df
 
-if __name__ == "__main__":
-    data = pd.read_csv('dataByMinute.csv') # Data 2023
-    # data = pd.read_csv("outsample_data_2024_dataByMinute.csv") # Data 2024
-    # data = pd.read_csv('outsample_dataByMinute.csv') # Data 2025
-    
-    df_ema_rsi = pd.read_csv('ema_rsi.csv')
 
-    for index, row in df_ema_rsi.iterrows():
-        print(f"Running backtest for EMA Fast: {row['EMA Fast']}, EMA Slow: {row['EMA Slow']}, RSI Period: {row['RSI Period']}")
+def run_backtests(data_path: str, params_path: str, result_dir: str, plot_path: str):
+    data = pd.read_csv(data_path)
+    strategy_params = pd.read_csv(params_path)
+
+    for _, row in strategy_params.iterrows():
         ema_periods = (row['EMA Fast'], row['EMA Slow'])
         rsi_period = row['RSI Period']
-        portfolio_values, trade_log_df = backtesting(data, ema_periods, rsi_period)
-        ema_str = f"{ema_periods[0]}_{ema_periods[1]}"
-        rsi_str = str(rsi_period)
-        trade_log_df.to_csv(f"result/trade_log_{ema_str}_{rsi_str}.csv", index=False)
-        portfolio_values.to_csv(f"result/portfolio_values_{ema_str}_{rsi_str}.csv", index=False)
+        print(f"Running backtest for EMA {ema_periods}, RSI {rsi_period}")
 
-    plot_all_portfolio_results(result_dir="result", output_file="result/plot/all_backtestsBy1.png")
+        portfolio_df, trades_df = backtesting(data, ema_periods, rsi_period)
+        suffix = f"{ema_periods[0]}_{ema_periods[1]}_{rsi_period}"
 
+        trades_df.to_csv(os.path.join(result_dir, f"trade_log_{suffix}.csv"), index=False)
+        portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{suffix}.csv"), index=False)
+
+    plot_all_portfolio_results(result_dir=result_dir, output_file=plot_path)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run backtests")
+    parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset CSV file (in the 'data/' folder)")
+    parser.add_argument("--params_path", type=str, required=True, help="Path to EMA/RSI parameters CSV")
+    parser.add_argument("--result_dir", type=str, default="result", help="Directory to save result CSVs")
+
+    args = parser.parse_args()
+
+    data_path = os.path.join("data", args.dataset)
+    plot_path = os.path.join(args.result_dir, "all_backtests.png")
+
+    os.makedirs(args.result_dir, exist_ok=True)
+    run_backtests(
+        data_path=data_path,
+        params_path=args.params_path,
+        result_dir=args.result_dir,
+        plot_path=plot_path
+    )
+
+    print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {plot_path}.")
+
+# python backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --params_path ema_rsi.csv --result_dir result 
