@@ -12,22 +12,38 @@ def maximumDrawdown(portfolio_series):
     mdd = np.min(drawdown) if len(drawdown) > 0 else 0
     return (mdd, drawdown)
 
-def sharpRatio(portfolio_series, rf_rate=0.03, periods_per_year=252):
+# def sharpRatio(portfolio_series, rf_rate=0.03, periods_per_year=252):
+#     if len(portfolio_series) < 2 or not np.all(np.isfinite(portfolio_series)):
+#         return 0
+
+#     daily_returns = np.diff(portfolio_series) / portfolio_series[:-1]
+
+#     excess_daily_returns = daily_returns - rf_rate / periods_per_year
+
+#     mean_excess_return = np.mean(excess_daily_returns)
+#     std_excess_return = np.std(excess_daily_returns)
+
+#     if std_excess_return == 0:
+#         return 0
+
+#     sharpe_ratio = (mean_excess_return / std_excess_return) * np.sqrt(periods_per_year)
+#     return sharpe_ratio
+
+def sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=252):
     if len(portfolio_series) < 2 or not np.all(np.isfinite(portfolio_series)):
-        return 0
+        return 0.0
 
-    daily_returns = np.diff(portfolio_series) / portfolio_series[:-1]
+    returns = np.diff(portfolio_series) / portfolio_series[:-1]
 
-    excess_daily_returns = daily_returns - rf_rate / periods_per_year
+    rf_per_period = rf_rate / periods_per_year
+    excess = returns - rf_per_period
 
-    mean_excess_return = np.mean(excess_daily_returns)
-    std_excess_return = np.std(excess_daily_returns)
+    mean_excess = np.mean(excess)
+    std_excess  = np.std(excess, ddof=1)
+    if std_excess == 0:
+        return 0.0
 
-    if std_excess_return == 0:
-        return 0
-
-    sharpe_ratio = (mean_excess_return / std_excess_return) * np.sqrt(periods_per_year)
-    return sharpe_ratio
+    return mean_excess / std_excess * np.sqrt(periods_per_year)
 
 def plot_backtesting_results(portfolio_values, output_file):
     if not portfolio_values or len(portfolio_values) < 2:
@@ -42,7 +58,7 @@ def plot_backtesting_results(portfolio_values, output_file):
         return
 
     mdd, drawdown = maximumDrawdown(portfolio_series)
-    sharpe_ratio = sharpRatio(portfolio_series, rf_rate=0.03)
+    sharpe_ratio = sharpe_ratio(portfolio_series, rf_rate=0.03)
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax1.plot(dates, portfolio_series, label="Portfolio Value", color="blue", linewidth=2)

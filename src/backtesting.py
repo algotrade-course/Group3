@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from utils import (
@@ -6,7 +7,7 @@ from utils import (
     close_position_type, holding_future_contract_expired, 
     calculate_pnl_after_fee, check_margin_ratio
 )
-from evaluation import plot_all_portfolio_results
+from evaluation import maximumDrawdown,plot_all_portfolio_results,sharpe_ratio
 import argparse
 load_dotenv()
 
@@ -25,7 +26,11 @@ def future_contract_expired_close(holdings, cur_price, i, cash=INITIAL_CAPITAL):
     holdings = []
     return i + 1, [], total_realized_pnl, cash
 
-def backtesting(data, ema_periods, rsi_period):
+def backtesting(data, ema_periods, rsi_period, atr_period, 
+                vol_window, vol_thres, rsi_upper_threshold, 
+                rsi_lower_threshold,max_loss, min_profit, 
+                atr_multiplier, rsi_exit_threshold_range):
+    
     cash = INITIAL_CAPITAL
     portfolio_values = []
     total_realized_pnl = 0.0
@@ -40,10 +45,12 @@ def backtesting(data, ema_periods, rsi_period):
                       "Price": cur_price}
 
         if holdings:
-            close_action = close_position_type(data.iloc[k:i+1], cur_price, holdings, ema_periods, rsi_period)
+            close_action = close_position_type(data.iloc[k:i+1], cur_price, holdings, ema_periods, 
+                                               rsi_period, atr_period, max_loss, min_profit, 
+                                               atr_multiplier, rsi_exit_threshold_range)
 
             if  holding_future_contract_expired(holdings, data.iloc[i]):
-                print("Future contract expired", holdings, data.iloc[i])
+                # print("Future contract expired", holdings, data.iloc[i])
                 k, holdings, total_realized_pnl, cash = future_contract_expired_close(holdings, cur_price, i, cash)
                 trade_entry.update({
                         "Action": "Close_Future_Expired",
@@ -53,9 +60,11 @@ def backtesting(data, ema_periods, rsi_period):
                         "Total Point": total_realized_pnl
                 })
                 trade_log.append(trade_entry)
+                portfolio_value = cash
+                portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
                 continue
 
-            if close_action in [1, 2, 3]:
+            if close_action in [1, 2]:
                 pos_type = holdings[3]
                 new_holdings, realized_pnl = close_positions(data.iloc[k:i+1], cur_price, holdings)
                 value_in_cash = calculate_pnl_after_fee(realized_pnl)
@@ -75,10 +84,14 @@ def backtesting(data, ema_periods, rsi_period):
                 trade_log.append(log)
 
             else:
+                portfolio_value = cash
+                portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
                 continue
 
         if not holdings:
-            open_action = open_position_type(data.iloc[k:i+1], cur_price, ema_periods, rsi_period)
+            open_action = open_position_type(data.iloc[k:i+1], cur_price, ema_periods, rsi_period,
+                                             vol_window, vol_thres, rsi_upper_threshold, 
+                                             rsi_lower_threshold)
             if (open_action in [1, 2]) and check_margin_ratio(cash, cur_price, MARGIN_REQUIREMENT,CONTRACT_SIZE,1):
 
                 position_type = "LONG" if open_action == 1 else "SHORT"
@@ -91,15 +104,21 @@ def backtesting(data, ema_periods, rsi_period):
                     "Total Money": cash,
                 })
                 trade_log.append(trade_entry)
+                portfolio_value = cash
+                portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
                 continue
 
         portfolio_value = cash
         portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
-
+    
     trade_log_df = pd.DataFrame(trade_log)
-    portfolio_values_df = pd.DataFrame(portfolio_values)
-
-    return portfolio_values_df, trade_log_df
+    portfolio_df = pd.DataFrame(portfolio_values)
+    portfolio_series = portfolio_df["Portfolio Value"].values
+    
+    mdd, _ = maximumDrawdown(portfolio_series)
+    sharpeRatio = sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=len(data))
+    
+    return portfolio_df, trade_log_df, sharpeRatio, mdd
 
 
 def run_backtests(data_path: str, params_path: str, result_dir: str, plot_path: str):
@@ -111,11 +130,18 @@ def run_backtests(data_path: str, params_path: str, result_dir: str, plot_path: 
         rsi_period = row['RSI Period']
         print(f"Running backtest for EMA {ema_periods}, RSI {rsi_period}")
 
-        portfolio_df, trades_df = backtesting(data, ema_periods, rsi_period)
+        portfolio_df, trades_df, sharpe_ratio, mdd = backtesting(data=data, ema_periods=ema_periods, rsi_period=rsi_period, 
+                                                                 atr_period=10, vol_window=10, vol_thres=1.2, 
+                                                                 rsi_upper_threshold=55, rsi_lower_threshold=40,
+                                                                 max_loss=2.0, min_profit=0.5, atr_multiplier=1.0,
+                                                                 rsi_exit_threshold_range=50)
         suffix = f"{ema_periods[0]}_{ema_periods[1]}_{rsi_period}"
 
         trades_df.to_csv(os.path.join(result_dir, f"trade_log_{suffix}.csv"), index=False)
         portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{suffix}.csv"), index=False)
+        
+        print(f'SHARPE RATIO: {sharpe_ratio:.4f}')
+        print(f'MDD: {mdd:.2%}')
 
     plot_all_portfolio_results(result_dir=result_dir, output_file=plot_path)
 
