@@ -1,63 +1,92 @@
-import json
+import os
 import psycopg2 as psycopg
 import pprint
 import pandas as pd
 from datetime import datetime, timedelta
 import argparse
+from dotenv import load_dotenv
+import sys
+from tqdm import tqdm
+import pandas as pd
+import pprint
 
-def load_data():
-    with open('database.json') as f:
-        return json.load(f)
-    
-def create_connection (db_info):
-    con= psycopg.connect(
-      host=db_info['host'],
-      port=db_info['port'],
-      dbname=db_info['database'],
-      user=db_info['user'],
-      password=db_info['password']
+def create_connection():
+    load_dotenv()
+
+    con = psycopg.connect(
+        host=os.getenv('DB_HOST'),
+        port=os.getenv('DB_PORT'),
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD')
     )
     return con
+  
+import time
+from tqdm import tqdm
+from datetime import datetime, timedelta
 
-def get_data_from_db(connection, start_date, end_date):
-    query=f"""
+def split_date_range(start_date, end_date, num_chunks=10):
+    total_days = (end_date - start_date).days + 1
+    chunk_size = max(1, total_days // num_chunks)
+    chunks = []
+
+    current = start_date
+    while current <= end_date:
+        chunk_start = current
+        chunk_end = min(current + timedelta(days=chunk_size - 1), end_date)
+        chunks.append((chunk_start, chunk_end))
+        current = chunk_end + timedelta(days=1)
+
+    return chunks
+
+def get_data_from_db(connection, start_date_str, end_date_str):
+    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+    all_data = []
+    chunks = split_date_range(start_date, end_date, num_chunks=4)
+
+    for chunk_start, chunk_end in tqdm(chunks, desc="Querying by date chunks"):
+        query = f"""
             SELECT 
-            m.datetime::DATE AS date,
-            m.datetime::TIME AS time,
-            m.tickersymbol,
-            m.price,
-            tb_open.price AS open_price,
-            tb_close.price AS close_price,
-            tb_max.price AS high_price,
-            tb_min.price AS low_price,
-            tb.quantity AS total_quantity
-        FROM "quote"."matched" m
-        INNER JOIN "quote"."open" tb_open 
-            ON m.tickersymbol = tb_open.tickersymbol 
-            AND m.datetime::DATE = tb_open.datetime::DATE
-        INNER JOIN "quote"."close" tb_close 
-            ON m.tickersymbol = tb_close.tickersymbol 
-            AND m.datetime::DATE = tb_close.datetime::DATE
-        INNER JOIN "quote"."max" tb_max 
-            ON m.tickersymbol = tb_max.tickersymbol 
-            AND m.datetime::DATE = tb_max.datetime::DATE
-        INNER JOIN "quote"."min" tb_min 
-            ON m.tickersymbol = tb_min.tickersymbol 
-            AND m.datetime::DATE = tb_min.datetime::DATE
-        INNER JOIN "quote"."matchedvolume" tb 
-            ON m.tickersymbol = tb.tickersymbol 
-            AND m.datetime = tb.datetime
-        WHERE m.datetime::DATE BETWEEN DATE '{start_date}' AND DATE '{end_date}'
-        AND m.tickersymbol LIKE 'VN30F%'
-        ORDER BY m.datetime, m.tickersymbol;
+                m.datetime::DATE AS date,
+                m.datetime::TIME AS time,
+                m.tickersymbol,
+                m.price,
+                tb_open.price AS open_price,
+                tb_close.price AS close_price,
+                tb_max.price AS high_price,
+                tb_min.price AS low_price,
+                tb.quantity AS total_quantity
+            FROM "quote"."matched" m
+            INNER JOIN "quote"."open" tb_open 
+                ON m.tickersymbol = tb_open.tickersymbol 
+                AND m.datetime::DATE = tb_open.datetime::DATE
+            INNER JOIN "quote"."close" tb_close 
+                ON m.tickersymbol = tb_close.tickersymbol 
+                AND m.datetime::DATE = tb_close.datetime::DATE
+            INNER JOIN "quote"."max" tb_max 
+                ON m.tickersymbol = tb_max.tickersymbol 
+                AND m.datetime::DATE = tb_max.datetime::DATE
+            INNER JOIN "quote"."min" tb_min 
+                ON m.tickersymbol = tb_min.tickersymbol 
+                AND m.datetime::DATE = tb_min.datetime::DATE
+            INNER JOIN "quote"."matchedvolume" tb 
+                ON m.tickersymbol = tb.tickersymbol 
+                AND m.datetime = tb.datetime
+            WHERE m.datetime::DATE BETWEEN DATE '{chunk_start}' AND DATE '{chunk_end}'
+            AND m.tickersymbol LIKE 'VN30F%'
+            ORDER BY m.datetime, m.tickersymbol;
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            chunk_data = cursor.fetchall()
+            all_data.extend(chunk_data)
 
-  
-           """
-    with connection.cursor() as cursor:
-        cursor.execute(query)
-        data=cursor.fetchall()
-        return data
-  
+        time.sleep(1)  # ? Add 1-second delay for smoother real-time progress
+
+    return all_data
 
 
 def get_expiry_date(year, month):
@@ -67,6 +96,7 @@ def get_expiry_date(year, month):
     return third_thursday
 
 def process_data(data):
+
     columns = ["date", "time", "tickersymbol", "price", "open_price", "close_price", "high_price", "Low_price", "quantity"]
     df = pd.DataFrame(data, columns=columns)
 
@@ -83,15 +113,20 @@ def process_data(data):
 
     df["Date"] = pd.to_datetime(df["Date"])
 
-
     df["year"] = df["tickersymbol"].str.extract(r'VN30F(\d{2})(\d{2})')[0].astype(int) + 2000
     df["month"] = df["tickersymbol"].str.extract(r'VN30F(\d{2})(\d{2})')[1].astype(int)
 
     df["date_year"] = df["Date"].dt.year
     df["date_month"] = df["Date"].dt.month
 
-    df["expiry_date"] = df.apply(lambda row: get_expiry_date(row["date_year"], row["date_month"]), axis=1)
+    # Enable tqdm for pandas apply
+    tqdm.pandas(desc="Processing data")
 
+    # Show progress bar while applying get_expiry_date
+    df["expiry_date"] = df.progress_apply(
+        lambda row: get_expiry_date(row["date_year"], row["date_month"]),
+        axis=1
+    )
 
     df_filtered = df[
         ((df["Date"] <= df["expiry_date"]) & (df["month"] == df["date_month"]) & (df["year"] == df["date_year"])) |
@@ -104,8 +139,7 @@ def process_data(data):
 
 
 def get_processed_data(from_date, to_date):
-    db_info = load_data()
-    connection = create_connection(db_info)
+    connection = create_connection()
     
     if connection is None:
         raise ValueError("Database connection failed.")
@@ -128,6 +162,7 @@ def get_processed_data(from_date, to_date):
         connection.close() 
     
     return merged_series
+
 
 def aggregate_to_interval(input_csv, output_csv, interval='5T'):
     df = pd.read_csv(input_csv)
@@ -169,15 +204,16 @@ if __name__ == "__main__":
     parser.add_argument("--end_date", type=str, required=True, help="End date in YYYY-MM-DD format")
     parser.add_argument("--interval", type=str, default="5T", help="Pandas resample interval (default: 5T for 5 minutes)")
 
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1) 
     args = parser.parse_args()
-    db_info = load_data()
-    connection = create_connection(db_info)
+    connection = create_connection()
     data = process_data(get_data_from_db(connection, args.start_date, args.end_date))
-
-    raw_output_path = f"data/{args.start_date}_to_{args.end_date}.csv"
+    raw_output_path = f"src/data/{args.start_date}_to_{args.end_date}.csv"
     data.to_csv(raw_output_path)
 
-    agg_output_path = f"data/{args.start_date}_to_{args.end_date}_by_{args.interval}.csv"
+    agg_output_path = f"src/data/{args.start_date}_to_{args.end_date}_by_{args.interval}.csv"
     aggregate_to_interval(raw_output_path, agg_output_path, args.interval)
     aggregate_to_interval(raw_output_path, agg_output_path, args.interval)
 # python preprocess.py --start_date 2024-01-01 --end_date 2025-01-01 --interval 5T 
