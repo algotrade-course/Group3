@@ -9,7 +9,11 @@ import sys
 from tqdm import tqdm
 import pandas as pd
 import pprint
-
+import time
+from tqdm import tqdm
+from datetime import datetime, timedelta
+load_dotenv()
+data_path = os.getenv('DATAPATH')
 def create_connection():
     load_dotenv()
 
@@ -22,9 +26,7 @@ def create_connection():
     )
     return con
   
-import time
-from tqdm import tqdm
-from datetime import datetime, timedelta
+
 
 def split_date_range(start_date, end_date, num_chunks=10):
     total_days = (end_date - start_date).days + 1
@@ -198,22 +200,35 @@ def aggregate_to_interval(input_csv, output_csv, interval='5T'):
 
     print(f"Processed {interval} interval OHLC data saved to: {output_csv}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process and aggregate trading data.")
     parser.add_argument("--start_date", type=str, required=True, help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end_date", type=str, required=True, help="End date in YYYY-MM-DD format")
     parser.add_argument("--interval", type=str, default="5T", help="Pandas resample interval (default: 5T for 5 minutes)")
-
+    
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1) 
     args = parser.parse_args()
+
     connection = create_connection()
     data = process_data(get_data_from_db(connection, args.start_date, args.end_date))
-    raw_output_path = f"src/data/{args.start_date}_to_{args.end_date}.csv"
-    data.to_csv(raw_output_path)
 
-    agg_output_path = f"src/data/{args.start_date}_to_{args.end_date}_by_{args.interval}.csv"
+    if data_path is not None:
+        os.makedirs(data_path, exist_ok=True)
+    else:
+        data_path = "src/data"
+        os.makedirs(data_path, exist_ok=True)
+
+    # File paths based on resolved data_path
+    raw_output_path = f"{data_path}/{args.start_date}_to_{args.end_date}.csv"
+    agg_output_path = f"{data_path}/{args.start_date}_to_{args.end_date}_by_{args.interval}.csv"
+
+    # Save raw data
+    data.to_csv(raw_output_path, index=False)
+
+    # Run aggregation
     aggregate_to_interval(raw_output_path, agg_output_path, args.interval)
-    aggregate_to_interval(raw_output_path, agg_output_path, args.interval)
+
 # python preprocess.py --start_date 2024-01-01 --end_date 2025-01-01 --interval 5T 

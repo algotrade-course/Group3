@@ -14,6 +14,7 @@ load_dotenv()
 INITIAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
+data_path_env= os.getenv('DATAPATH')
 
 
 def future_contract_expired_close(holdings, cur_price, i, cash=INITIAL_CAPITAL):
@@ -150,10 +151,12 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset CSV file (in the 'data/' folder)")
     parser.add_argument("--params_path", type=str, required=True, help="Path to EMA/RSI parameters CSV")
     parser.add_argument("--result_dir", type=str, default="result", help="Directory to save result CSVs")
-
     args = parser.parse_args()
-
-    data_path = os.path.join("data", args.dataset)
+    if data_path_env is not None:
+        data_path = os.path.join(data_path_env, args.dataset)
+    else:
+        data_path = os.path.join("src/data", args.dataset)
+    
     plot_path = os.path.join(args.result_dir, "all_backtests.png")
 
     os.makedirs(args.result_dir, exist_ok=True)
