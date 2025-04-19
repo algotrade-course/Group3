@@ -9,12 +9,26 @@ from utils import (
 )
 from evaluation import maximumDrawdown,plot_all_portfolio_results,sharpe_ratio
 import argparse
+from tqdm import tqdm
+
 load_dotenv()
 
 INITIAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
 data_path_env= os.getenv('DATAPATH')
+ema_fast=float(os.getenv('EMA_FAST'))
+ema_slow=float(os.getenv('EMA_SLOW'))
+atr_period=int(os.getenv('ATR_PERIOD'))
+rsi_period=int(os.getenv('RSI_PERIOD'))
+rsi_upper_threshold=float(os.getenv('RSI_UPPER'))
+rsi_lower_threshold=float(os.getenv('RSI_LOWER'))
+vol_window=int(os.getenv('VOL_WINDOW'))
+vol_thres=float(os.getenv('VOL_THRES'))
+max_loss=float(os.getenv('MAX_LOSS'))
+min_profit=float(os.getenv('MIN_PROFIT'))
+atr_multiplier=float(os.getenv('ATR_MULT'))
+rsi_exit_threshold_range=float(os.getenv('RSI_EXIT'))
 
 
 def future_contract_expired_close(holdings, cur_price, i, cash=INITIAL_CAPITAL):
@@ -39,7 +53,7 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
     trade_log = []
     k=0
 
-    for i in range(len(data)):
+    for i in tqdm(range(len(data)), desc="Running backtest"):
         cur_price=data.iloc[i]['Close']
         trade_entry= {"Date": data.iloc[i]["Date"],
                       "Time": data.iloc[i]["Time"],
@@ -122,34 +136,31 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
     return portfolio_df, trade_log_df, sharpeRatio, mdd
 
 
-def run_backtests(data_path: str, params_path: str, result_dir: str, plot_path: str):
+def run_backtests(data_path: str,  result_dir: str, plot_path: str):
     data = pd.read_csv(data_path)
-    strategy_params = pd.read_csv(params_path)
+    # strategy_params = pd.read_csv(params_path)
 
-    for _, row in strategy_params.iterrows():
-        ema_periods = (row['EMA Fast'], row['EMA Slow'])
-        rsi_period = row['RSI Period']
-        print(f"Running backtest for EMA {ema_periods}, RSI {rsi_period}")
-
-        portfolio_df, trades_df, sharpe_ratio, mdd = backtesting(data=data, ema_periods=ema_periods, rsi_period=rsi_period, 
-                                                                 atr_period=10, vol_window=10, vol_thres=1.2, 
-                                                                 rsi_upper_threshold=55, rsi_lower_threshold=40,
-                                                                 max_loss=2.0, min_profit=0.5, atr_multiplier=1.0,
-                                                                 rsi_exit_threshold_range=50)
-        suffix = f"{ema_periods[0]}_{ema_periods[1]}_{rsi_period}"
-
-        trades_df.to_csv(os.path.join(result_dir, f"trade_log_{suffix}.csv"), index=False)
-        portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{suffix}.csv"), index=False)
-        
-        print(f'SHARPE RATIO: {sharpe_ratio:.4f}')
-        print(f'MDD: {mdd:.2%}')
+    # for _, row in strategy_params.iterrows():
+    ema_periods = (ema_fast, ema_slow) 
+    print(vol_window)
+    print(f"Running backtest for EMA {ema_periods}, RSI {rsi_period}")
+    portfolio_df, trades_df, sharpe_ratio, mdd = backtesting(data=data, ema_periods=ema_periods, rsi_period=rsi_period, 
+                                                             atr_period=atr_period, vol_window=vol_window, vol_thres=vol_thres, 
+                                                             rsi_upper_threshold=rsi_upper_threshold, rsi_lower_threshold=rsi_lower_threshold,
+                                                             max_loss=max_loss, min_profit=min_profit, atr_multiplier=atr_multiplier,
+                                                             rsi_exit_threshold_range=rsi_exit_threshold_range)
+    suffix = f"{ema_periods[0]}_{ema_periods[1]}_{rsi_period}"
+    trades_df.to_csv(os.path.join(result_dir, f"trade_log_{suffix}.csv"), index=False)
+    portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{suffix}.csv"), index=False)
+    
+    print(f'SHARPE RATIO: {sharpe_ratio:.4f}')
+    print(f'MDD: {mdd:.2%}')
 
     plot_all_portfolio_results(result_dir=result_dir, output_file=plot_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run backtests")
     parser.add_argument("--dataset", type=str, required=True, help="Name of the dataset CSV file (in the 'data/' folder)")
-    parser.add_argument("--params_path", type=str, required=True, help="Path to EMA/RSI parameters CSV")
     parser.add_argument("--result_dir", type=str, default="result", help="Directory to save result CSVs")
     args = parser.parse_args()
     if data_path_env is not None:
@@ -162,7 +173,6 @@ if __name__ == "__main__":
     os.makedirs(args.result_dir, exist_ok=True)
     run_backtests(
         data_path=data_path,
-        params_path=args.params_path,
         result_dir=args.result_dir,
         plot_path=plot_path
     )
