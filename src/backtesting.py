@@ -179,4 +179,4 @@ if __name__ == "__main__":
 
     print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {plot_path}.")
 
-# python backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --params_path ema_rsi.csv --result_dir result 
+# python backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result 

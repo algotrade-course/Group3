@@ -54,7 +54,7 @@ source venv/bin/activate # for Linux/MacOS
 ```
 pip install -r requirements.txt
 ```
-3. (OPTIONAL) Create `.env` file in the root directory of the project and fill in the required information. The `.env` file is used to store environment variables that are used in the project. The following is an example of a `.env` file:
+3. (OPTIONAL) Create `.env` file in the directory `src` of the project and fill in the required information. The `.env` file is used to store environment variables that are used in the project. The following is an example of a `.env` file:
 ```
 DB_NAME=<database name>
 DB_USER=<database user name>
@@ -94,10 +94,29 @@ The CSV file will include the following columns:
 ```
 
 ## In-sample Backtesting
-- Describe the In-sample Backtesting step
-    - Parameters
-    - Data
-- Step 4 of the Nine-Step
+In the `src/.env` file, key hyperparameters for our hypothesis are set to default values for in-sample backtesting. These include settings for indicators such as EMA, RSI, ATR, and volume thresholds, as well as risk management parameters like stop-loss and take-profit levels.
+
+```
+# parameters
+EMA_FAST=10
+EMA_SLOW=30
+RSI_PERIOD=14
+ATR_PERIOD=14
+VOL_WINDOW=10
+VOL_THRES=1.2
+RSI_UPPER=55
+RSI_LOWER=45
+MAX_LOSS=3.0
+MIN_PROFIT=0.5
+ATR_MULT=1.5
+RSI_EXIT=50
+```
+For this project, we use data from the period 2023-01-01 to 2023-12-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
+- `--dataset`: specify the dataset file to be used
+- `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
+```
+# python backtesting.py --dataset 2023-01-01_to_2023-01-01_by_5T.csv --result_dir result 
+```
 ### In-sample Backtesting Result
 - Brieftly shown the result: table, image, etc.
 - Has link to the In-sample Backtesting Report
