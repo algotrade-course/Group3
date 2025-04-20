@@ -1,65 +1,101 @@
 import pandas as pd
-from trading_strategy import TradingStrategy
-import pandas as pd
-from datetime import datetime
-from collections import defaultdict
-import ast
-import pandas as pd
 import ast
 from datetime import datetime, timedelta
 
+from preprocess_pt import load_data, create_connection, get_data_from_db, process_data, aggregate_to_interval
+from trading_strategy import TradingStrategy
 
-class SnapshotToBarSimulator:
-    def __init__(self, strategy):
-        self.strategy = strategy
-        self.current_tick_data = []
-        self.bars = []
-        self.current_bar_start_time = None
-        self.last_processed_time = None
+class TickStreamSimulator:
+    def __init__(self):
+        self.tick_buffer = []
+        self.current_window_start = None
+        self.strategy = TradingStrategy()
 
-    def process_tick(self, tick_data):
-        tick_data['Date'] = datetime.strptime(tick_data['datetime_str'], '%d/%m/%Y %H:%M:%S')
-        self.current_tick_data.append(tick_data)
-        if len(self.current_tick_data) < 30:
-            return
-        if self.last_processed_time is None:
-            self.last_processed_time = tick_data['Date']
-            self.current_bar_start_time = tick_data['Date']
-        self.current_tick_data.append(tick_data)
-        if (tick_data['Date'] - self.last_processed_time).total_seconds() >= 300:
-            self.generate_5min_bar()
-            self.last_processed_time = tick_data['Date']
+    def get_data_from_last_date(self, current_tick_data):
+        current_date = pd.to_datetime(current_tick_data['datetime'].iloc[0])
+        yesterday = current_date - timedelta(days=1)
 
-    def generate_5min_bar(self):
-        if not self.current_tick_data:
-            return
-        df = pd.DataFrame(self.current_tick_data)
-        open_price = df['Close'].iloc[0]
-        close_price = df['Close'].iloc[-1]
-        high_price = df['High'].max()
-        low_price = df['Low'].min()
-        volume = df['Volume'].sum()
-        bar = {
-            'Date': self.current_bar_start_time,
-            'Open': open_price,
-            'High': high_price,
-            'Low': low_price,
-            'Close': close_price,
-            'Volume': volume
-        }
-        self.bars.append(bar)
-        self.strategy.process_tick(bar, df)
-        self.current_tick_data = []
-        self.current_bar_start_time = self.last_processed_time
+        if yesterday.weekday() == 5:
+            yesterday -= timedelta(days=1)
+        elif yesterday.weekday() == 6:
+            yesterday -= timedelta(days=2)
 
-    def get_bars(self):
-        return self.bars
+        if yesterday.day == 1:
+            return None
 
+        db_info = load_data()
+        connection = create_connection(db_info)
+        last_date_data = process_data(get_data_from_db(connection, yesterday.date()))
+        last_date_data_5T = aggregate_to_interval(last_date_data, "5T")
+        return last_date_data_5T
 
-strategy = TradingStrategy()
-simulator = SnapshotToBarSimulator(strategy)
-tick_data = pd.read_csv("kafka_output (1).csv")
-for index, row in tick_data.iterrows():
-    simulator.process_tick(row)
-bars = simulator.get_bars()
-print(bars)
+    def parse_row(self, row):
+        row_dict = {}
+        for col in ['datetime_str', 'latest_matched_price', 'latest_matched_quantity']:
+            if 'price' in col or 'quantity' in col:
+                val = ast.literal_eval(row[col])
+                row_dict[col + '_value'] = val.get('value') if isinstance(val, dict) else None
+            else:
+                row_dict[col] = row[col]
+
+        parsed_datetime = pd.to_datetime(row_dict['datetime_str'], format="%d/%m/%Y %H:%M:%S")
+        row_dict['datetime'] = parsed_datetime
+        row_dict['datetime_str'] = parsed_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        return row_dict
+
+    def preprocess_tick(self, row_raw_data):
+        clean = self.parse_row(row_raw_data)
+        clean_df = pd.DataFrame([clean])
+        return clean_df
+
+    def convert_to_5min_bars(self, tick_data, ticker_symbol='VN30F1M'):
+        if not tick_data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(tick_data)
+        df['datetime'] = pd.to_datetime(df['datetime'], dayfirst=True)
+        df.sort_values('datetime', inplace=True)
+
+        df['latest_matched_price_value'] = df['latest_matched_price_value'].astype(float)
+        df['latest_matched_quantity_value'] = df['latest_matched_quantity_value'].astype(float)
+
+        grouped = df.groupby(pd.Grouper(key='datetime', freq='5min'))
+        ohlc = grouped['latest_matched_price_value'].ohlc()
+        volume = grouped['latest_matched_quantity_value'].sum()
+
+        result = pd.concat([ohlc, volume], axis=1).reset_index()
+        result.columns = ['datetime', 'Open', 'High', 'Low', 'Close', 'Volume']
+        result['Date'] = result['datetime'].dt.strftime('%Y-%m-%d')
+        result['Time'] = result['datetime'].dt.strftime('%H:%M:%S')
+        result['tickersymbol'] = ticker_symbol
+
+        for col in ['High', 'Low', 'Close', 'Open']:
+            result[col] = result[col].astype(float)
+
+        result = result[['Date', 'Time', 'tickersymbol', 'Open', 'Close', 'High', 'Low', 'Volume']]
+        result.index = result.index + 1
+        result.reset_index(inplace=True)
+        result.columns = [''] + list(result.columns[1:])
+        return result
+
+    def process_tick_streaming(self, processed_row, ticker_symbol='VN30F1M'):
+        tick_time = processed_row['datetime'].iloc[0]
+        if self.current_window_start is None:
+            self.current_window_start = tick_time
+
+        self.tick_buffer.append(processed_row.iloc[0])
+
+        new_bar_df = None
+        if tick_time - self.current_window_start >= timedelta(minutes=5):
+            new_bar_df = self.convert_to_5min_bars(self.tick_buffer, ticker_symbol)
+            self.tick_buffer.clear()
+            self.current_window_start = None
+
+        # You can insert strategy bar-handling logic here
+        if new_bar_df is not None:
+            self.strategy.handle_bar(new_bar_df)
+
+        return new_bar_df
+    
+    def get_trading_log(self):
+        return self.strategy.get_trading_log()  

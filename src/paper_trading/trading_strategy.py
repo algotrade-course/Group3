@@ -16,6 +16,8 @@ class TradingStrategy:
         return df[column].ewm(span=period, adjust=False).mean()
 
     def calculate_rsi(self, df, column='Close', period=9):
+        df = df.copy()
+        df[column] = df[column].astype(float)
         delta = df[column].diff().to_numpy()
         gain = np.where(delta > 0, delta, 0)
         loss = np.where(delta < 0, -delta, 0)
@@ -33,10 +35,20 @@ class TradingStrategy:
         return vwap_series.iloc[-1]
 
     def calculate_atr(self, data, period=14):
-        tr = pd.concat([data["High"] - data["Low"],
-                        (data["High"] - data["Close"].shift()).abs(),
-                        (data["Low"] - data["Close"].shift()).abs()], axis=1).max(axis=1)
+        # Ensure all price columns are float
+        data = data.copy()
+        data["High"] = data["High"].astype(float)
+        data["Low"] = data["Low"].astype(float)
+        data["Close"] = data["Close"].astype(float)
+
+        tr = pd.concat([
+            data["High"] - data["Low"],
+            (data["High"] - data["Close"].shift()).abs(),
+            (data["Low"] - data["Close"].shift()).abs()
+        ], axis=1).max(axis=1)
+        
         return tr.rolling(window=period).mean()
+
 
     def check_volume_trend(self, data, direction="LONG"):
         avg_volume = data['Volume'].rolling(15).mean()
@@ -78,6 +90,7 @@ class TradingStrategy:
         if position_type not in {"LONG", "SHORT"}:
             raise ValueError("Invalid position type. Must be 'LONG' or 'SHORT'.")
         self.holdings = (data['Date'], entry_point, "OPEN", position_type, entry_point, self.cash, data['tickersymbol'])
+        self.trade_log.append((data['Date'], position_type, entry_point, entry_point, self.pnl))
 
     def close_position(self, data, cur_price):
         if not self.holdings:
@@ -90,23 +103,28 @@ class TradingStrategy:
         atr = self.calculate_atr(data).iloc[-1]
         self.pnl += round(pnl, 3)
 
-        self.holdings = None  # Position closed
+        self.holdings = None  
         self.trade_log.append((data['Date'], position_type, entry_price, cur_price, self.pnl))
+  
 
     def process_tick(self, tick_data, data):
         cur_price = tick_data['Close']
-
         position_type = self.open_position_type(data, cur_price)
-        if position_type == 1:  # Long signal
-            if self.holdings is None:
-                self.open_position("LONG", cur_price, tick_data)
-        elif position_type == 2:  # Short signal
-            if self.holdings is None:
-                self.open_position("SHORT", cur_price, tick_data)
-        
-        # Closing logic
+        print(f"Position Type: {position_type}")
+
+        if position_type == 1 and self.holdings is None:
+            self.open_position("LONG", cur_price, tick_data)
+            return
+
+        elif position_type == 2 and self.holdings is None:
+            self.open_position("SHORT", cur_price, tick_data)
+            return 
+
         if self.holdings:
             self.close_position(data, cur_price)
+            return 
+
+
 
     def open_position_type(self, data, cur_price, ema_periods=[10, 30], rsi_period=14):
         ema10 = self.calculate_ema(data, 'Close', ema_periods[0])
