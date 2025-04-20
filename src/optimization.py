@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import json
 import argparse
+import random
+
 # from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import matplotlib.pyplot as plt
@@ -25,6 +27,9 @@ load_dotenv()
     Calling visualization (after optimization sucessfully): python3 run_optoptimizationimize.py -v <PATH_TO_SUMMARY_FILE (CREATED BY OPTIMIZATION PROCESS)>
 '''
 
+SEED = 42
+rng = np.random.default_rng(SEED)
+
 INITIAL_CAPITAL = float(os.getenv("INITAL_CAPITAL"))
 CONTRACT_SIZE = int(os.getenv("CONTRACT_SIZE"))
 MARGIN_REQUIREMENT = float(os.getenv("MARGIN_REQUIREMENT"))
@@ -39,7 +44,7 @@ def ensure_summary_file(path):
         pd.DataFrame(columns=header).to_csv(path, index=False)
         
 def visualization(data_path):
-    df = pd.read_csv('OPTIMIZATION/summary.csv')
+    df = pd.read_csv(data_path)
 
     plt.figure()
     plt.scatter(df['Sharpe'], df['mdd'], s=40, alpha=0.7)
@@ -68,49 +73,79 @@ def visualization(data_path):
     plt.tight_layout()
     plt.show()
     
-def optimize_strategy(data, result_dir="OPTIMIZATION", ):
+import os
+import json
+import pandas as pd
+import random
+from itertools import product
+from backtesting import backtesting  # your existing import
+
+MAX_MODELS = 3000
+
+def optimize_strategy(data, result_dir="OPTIMIZATION"):
     os.makedirs(result_dir, exist_ok=True)
-    
     summary_path = os.path.join(result_dir, 'summary.csv')
     ensure_summary_file(summary_path)
-    
+
+    # load parameter space
     with open("optimization.json", "r") as f:
-        param_config = json.load(f)
-    
-    ema_short_range = param_config["ema_short_range"]
-    ema_long_range = param_config["ema_long_range"]
-    rsi_range = param_config["rsi_range"]
-    rsi_lower_threshold_range = param_config["rsi_lower_threshold_range"]
-    rsi_upper_threshold_range = param_config["rsi_upper_threshold_range"]
-    atr_period_range = param_config["atr_period_range"]
-    max_loss_range = param_config["max_loss_range"]
-    min_profit_range = param_config["min_profit_range"]
-    atr_mult_range = param_config["atr_mult_range"]
-    vol_thresh_range = param_config["vol_thresh_range"]
-    volume_window_range = param_config["volume_window_range"]
-    rsi_exit_threshold_range = param_config["rsi_exit_threshold_range"]
-    
-    total_sample = 2048
+        pc = json.load(f)
+
+    param_lists = [
+        pc["ema_short_range"],
+        pc["ema_long_range"],
+        pc["rsi_range"],
+        pc["rsi_lower_threshold_range"],
+        pc["rsi_upper_threshold_range"],
+        pc["atr_period_range"],
+        pc["max_loss_range"],
+        pc["min_profit_range"],
+        pc["atr_mult_range"],
+        pc["vol_thresh_range"],
+        pc["volume_window_range"],
+        pc["rsi_exit_threshold_range"]
+    ]
+
+    # build and shuffle all combinations
+    all_combos = list(product(*param_lists))
+    perm = rng.permutation(len(all_combos))
+
+    # limit to MAX_MODELS
+    combos_to_run = [all_combos[i] for i in perm[:MAX_MODELS]]
 
     results = []
-    sampleIndex = 0
-    for ema_short, ema_long, rsi, rsi_lower, rsi_upper, atr_period, max_loss, min_profit, atr_mult, vol_thresh, vol_window, rsi_exit in product(
-            ema_short_range, ema_long_range, rsi_range, rsi_lower_threshold_range, rsi_upper_threshold_range,
-            atr_period_range, max_loss_range, min_profit_range, atr_mult_range, vol_thresh_range, volume_window_range, rsi_exit_threshold_range):
-        
-        sampleIndex = sampleIndex + 1
-        print(f'Sample {sampleIndex}/{total_sample}')
-        portfolio_df, trades_df, sharpe_ratio, mdd = backtesting(data=data, ema_periods=(ema_short,ema_long), rsi_period=rsi, 
-                                                                 atr_period=atr_period, vol_window=vol_window, vol_thres=vol_thresh, 
-                                                                 rsi_upper_threshold=rsi_upper, rsi_lower_threshold=rsi_lower,
-                                                                 max_loss=max_loss, min_profit=min_profit, atr_multiplier=atr_mult,
-                                                                 rsi_exit_threshold_range=rsi_exit)
-        
-        initial_capital = portfolio_df["Portfolio Value"].iloc[0]
-        net_profit = portfolio_df["Portfolio Value"].iloc[-1] - initial_capital
-        
+    total = len(combos_to_run)
+    for idx, combo in enumerate(combos_to_run, start=1):
+        print(f"Sample {idx}/{total}")
+        (
+            ema_short, ema_long, rsi,
+            rsi_lower, rsi_upper,
+            atr_period, max_loss, min_profit,
+            atr_mult, vol_thresh, vol_window,
+            rsi_exit
+        ) = combo
+
+        # run backtest
+        portfolio_df, trades_df, sharpe, mdd = backtesting(
+            data=data,
+            ema_periods=(ema_short, ema_long),
+            rsi_period=rsi,
+            atr_period=atr_period,
+            vol_window=vol_window,
+            vol_thres=vol_thresh,
+            rsi_upper_threshold=rsi_upper,
+            rsi_lower_threshold=rsi_lower,
+            max_loss=max_loss,
+            min_profit=min_profit,
+            atr_multiplier=atr_mult,
+            rsi_exit_threshold_range=rsi_exit
+        )
+
+        initial = portfolio_df["Portfolio Value"].iloc[0]
+        net_profit = portfolio_df["Portfolio Value"].iloc[-1] - initial
+
         row = {
-            'SampleIndex': sampleIndex,
+            'SampleIndex': idx,
             'EMA_Short': ema_short,
             'EMA_Long': ema_long,
             'RSI_Period': rsi,
@@ -123,22 +158,20 @@ def optimize_strategy(data, result_dir="OPTIMIZATION", ):
             'Volume_Threshold': vol_thresh,
             'Volume_window': vol_window,
             'RSI_exit_threshold': rsi_exit,
-            'Sharpe': sharpe_ratio,
+            'Sharpe': sharpe,
             'mdd': mdd,
             'net_profit': net_profit
         }
 
-        results.append(row)
-        
         pd.DataFrame([row]).to_csv(summary_path, mode='a', header=False, index=False)
         results.append(row)
 
-        trades_df.to_csv(os.path.join(result_dir, f"trade_log_{sampleIndex}.csv"), index=False)
-        portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{sampleIndex}.csv"), index=False)
+        trades_df.to_csv(os.path.join(result_dir, f"trade_log_{idx}.csv"), index=False)
+        portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{idx}.csv"), index=False)
 
-    df_result = pd.DataFrame(results)
-    df_result = df_result.sort_values(by='Sharpe', ascending=False)
-    return df_result
+    # return sorted results
+    return pd.DataFrame(results).sort_values('Sharpe', ascending=False)
+
 
 def main():
     parser = argparse.ArgumentParser(

@@ -64,7 +64,7 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
                                                rsi_period, atr_period, max_loss, min_profit, 
                                                atr_multiplier, rsi_exit_threshold_range)
 
-            if  holding_future_contract_expired(holdings, data.iloc[i]):
+            if  i < len(data) - 1 and holding_future_contract_expired(holdings, data.iloc[i+1]):
                 # print("Future contract expired", holdings, data.iloc[i])
                 k, holdings, total_realized_pnl, cash = future_contract_expired_close(holdings, cur_price, i, cash)
                 trade_entry.update({
@@ -79,7 +79,7 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
                 portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
                 continue
 
-            if close_action in [1, 2]:
+            if close_action in [1, 2] or i == (len(data) - 1):
                 pos_type = holdings[3]
                 new_holdings, realized_pnl = close_positions(data.iloc[k:i+1], cur_price, holdings)
                 value_in_cash = calculate_pnl_after_fee(realized_pnl)
@@ -97,6 +97,10 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
                     "Total Point": total_realized_pnl
                 }
                 trade_log.append(log)
+                if (i == (len(data) - 1)):
+                    portfolio_value = cash
+                    portfolio_values.append({"Date": data.iloc[i]["Date"], "Portfolio Value": portfolio_value})
+                    continue
 
             else:
                 portfolio_value = cash
@@ -166,7 +170,7 @@ if __name__ == "__main__":
     if data_path_env is not None:
         data_path = os.path.join(data_path_env, args.dataset)
     else:
-        data_path = os.path.join("src/data", args.dataset)
+        data_path = os.path.join("data", args.dataset)
     
     plot_path = os.path.join(args.result_dir, "all_backtests.png")
 

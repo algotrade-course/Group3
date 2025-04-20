@@ -1,14 +1,14 @@
 {
-  "ema_short_range": [5, 10],              
-  "ema_long_range": [20, 30],                 
-  "rsi_range": [10, 14],                       
-  "rsi_lower_threshold_range": [40, 45],  
-  "rsi_upper_threshold_range": [55, 60],   
-  "atr_period_range": [10, 14],                 
-  "max_loss_range": [2.0, 3.0],         
-  "min_profit_range": [0.5, 1.0],          
-  "atr_mult_range": [1.0, 1.5],          
-  "vol_thresh_range": [1.0, 1.2],       
-  "volume_window_range": [10, 15],                  
-  "rsi_exit_threshold_range": [50]              
+  "ema_short_range": [5, 8, 10, 12, 15],
+  "ema_long_range": [20, 25, 30, 35, 40],
+  "rsi_range": [10, 14, 18],
+  "rsi_lower_threshold_range": [25, 30, 35, 40, 45],
+  "rsi_upper_threshold_range": [50, 55, 60, 65, 70],
+  "atr_period_range": [10, 14, 21],
+  "max_loss_range": [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
+  "min_profit_range": [0.5, 1.0, 1.5, 2.0],
+  "atr_mult_range": [1.0, 1.5, 2.0],
+  "vol_thresh_range": [0.8, 1.0, 1.2, 1.4],
+  "volume_window_range": [5, 10, 15, 20],
+  "rsi_exit_threshold_range": [45, 50, 55]
 }

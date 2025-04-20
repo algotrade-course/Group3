@@ -84,7 +84,6 @@ def open_position_type(data, cur_price, ema_periods, rsi_period, vol_window, vol
         return 0  # Do nthing
 
 
-
 def close_position_type(data, cur_price, holdings, ema_periods, rsi_period, atr_period, max_loss, min_profit, atr_multiplier, rsi_exit_threshold_range):
     ema10 = calculate_ema(data, 'Close', ema_periods[0])
     ema30 = calculate_ema(data, 'Close', ema_periods[1])
