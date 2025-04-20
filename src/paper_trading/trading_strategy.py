@@ -96,7 +96,6 @@ class TradingStrategy:
     def process_tick(self, tick_data, data):
         cur_price = tick_data['Close']
 
-        # Decision logic
         position_type = self.open_position_type(data, cur_price)
         if position_type == 1:  # Long signal
             if self.holdings is None:

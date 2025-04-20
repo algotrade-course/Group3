@@ -6,28 +6,29 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 
-def loafd_config():
-    with open("kafka-config.json", 'r') as f:
-        config = json.load(f)
-    return config
+# def loafd_config():
+#     with open("kafka-config.json", 'r') as f:
+#         config = json.load(f)
+#     return config
 
-def parse_timestamp(ts_str):
-    return datetime.strptime(ts_str, "%d/%m/%Y %H:%M:%S")
+# def parse_timestamp(ts_str):
+#     return datetime.strptime(ts_str, "%d/%m/%Y %H:%M:%S")
 
-topic = "HNXDS.VN30F1M"  
-config = loafd_config()  
-consumer = KafkaConsumer(
-    topic,
-    **config,
-    group_id="21125146",  
-    auto_offset_reset="latest",
-    value_deserializer=lambda v: json.loads(v.decode('utf-8')),
-)
+# topic = "HNXDS.VN30F1M"  
+# config = loafd_config()  
+# consumer = KafkaConsumer(
+#     topic,
+#     **config,
+#     group_id="21125146",  
+#     auto_offset_reset="latest",
+#     value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+# )
 
 strategy = TradingStrategy()
 tick_buffer = []
 current_bar_start = None
 ohlcv_data = []
+
 
 for msg in consumer:
     tick = msg.value
