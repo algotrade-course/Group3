@@ -119,7 +119,7 @@ class TickStreamSimulator:
     def run(self, tick_data):
         new_bar_df = None
         processed_data = self.preprocess_tick(tick_data.iloc[0])
-        print(f"Processed data: {processed_data}")
+        #print(f"Processed data: {processed_data}")
         if len(self.data) == 0:
             last_data = self.get_data_from_last_date(processed_data)
             if last_data is not None:
@@ -128,6 +128,8 @@ class TickStreamSimulator:
         new_bar_df = self.process_tick_streaming(processed_data)
 
         if new_bar_df is not None and not new_bar_df.empty:
+            print(f"new_bar: {new_bar_df}")
             self.data= pd.concat([self.data, new_bar_df], ignore_index=True)
             latest_bar = new_bar_df.iloc[-1]
+            print(f'Lastest bar: {latest_bar}')
             self.strategy.process_tick(latest_bar, self.data)

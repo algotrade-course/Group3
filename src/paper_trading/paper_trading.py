@@ -17,7 +17,7 @@ def consume_message(config: dict, topic: str, simulator: TickStreamSimulator):
     consumer = KafkaConsumer(
         topic,
         **config,
-        group_id="21125052",  # Student-specific group_id
+        group_id="21125071",  # Student-specific group_id
         auto_offset_reset="latest",
         value_deserializer=lambda v: json.loads(v.decode('utf-8')),
         enable_auto_commit=True,
@@ -63,7 +63,7 @@ def consume_message(config: dict, topic: str, simulator: TickStreamSimulator):
 
     time.sleep(1)
     
-    consumer.seek_to_beginning()
+    # consumer.seek_to_beginning()
 
 
 
