@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 class TradingStrategy:
-    def __init__(self, initial_cash=1_000_000, contract_size=100, margin_requirement=0.175):
+    def __init__(self, initial_cash=40000000, contract_size=100, margin_requirement=0.175):
         self.cash = initial_cash
         self.position = 0  # No position initially
         self.position_price = 0
@@ -90,7 +90,8 @@ class TradingStrategy:
         if position_type not in {"LONG", "SHORT"}:
             raise ValueError("Invalid position type. Must be 'LONG' or 'SHORT'.")
         self.holdings = (data['Date'], entry_point, "OPEN", position_type, entry_point, self.cash, data['tickersymbol'])
-        self.trade_log.append((data['Date'], position_type, entry_point, entry_point, self.pnl))
+        print(f"Opened position: {position_type} at {entry_point}, Cash: {self.cash}")
+        self.trade_log.append((data['Date'], position_type, entry_price, cur_price, self.pnl))
 
     def close_position(self, data, cur_price):
         if not self.holdings:
@@ -103,7 +104,10 @@ class TradingStrategy:
         atr = self.calculate_atr(data).iloc[-1]
         self.pnl += round(pnl, 3)
 
-        self.holdings = None  
+        self.holdings = None
+        value_in_cash = self.calculate_pnl_after_fee(pnl) 
+        self.cash += value_in_cash
+        print(f"Closed position: {position_type} at {cur_price}, PnL: {self.pnl}")  
         self.trade_log.append((data['Date'], position_type, entry_price, cur_price, self.pnl))
   
 
@@ -111,6 +115,9 @@ class TradingStrategy:
         cur_price = tick_data['Close']
         position_type = self.open_position_type(data, cur_price)
         print(f"Position Type: {position_type}")
+        if self.holdings:
+            self.close_position(data, cur_price)
+            return 
 
         if position_type == 1 and self.holdings is None:
             self.open_position("LONG", cur_price, tick_data)
@@ -120,9 +127,7 @@ class TradingStrategy:
             self.open_position("SHORT", cur_price, tick_data)
             return 
 
-        if self.holdings:
-            self.close_position(data, cur_price)
-            return 
+
 
 
 
@@ -157,6 +162,11 @@ class TradingStrategy:
             drawdown = (self.max_nav - current_nav) / self.max_nav
             if drawdown > self.max_drawdown:
                 self.max_drawdown = drawdown
+
+    def calculate_pnl_after_fee(self, pnl: float):
+        profit_after_fee = pnl - 0.47
+        profit_in_cash=profit_after_fee*1000*1000
+        return profit_in_cash
 
     def get_trade_log(self):
         return self.trade_log

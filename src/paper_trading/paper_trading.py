@@ -1,5 +1,6 @@
 import json
 import time
+import os
 from kafka import KafkaConsumer
 import pandas as pd
 from trading_strategy import TradingStrategy 
@@ -16,9 +17,10 @@ def consume_message(config: dict, topic: str, simulator: TickStreamSimulator):
     consumer = KafkaConsumer(
         topic,
         **config,
-        group_id="21125146",  # Student-specific group_id
+        group_id="21125052",  # Student-specific group_id
         auto_offset_reset="latest",
         value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+        enable_auto_commit=True,
     )
 
     print("Consumer started, waiting for messages...")
@@ -36,18 +38,30 @@ def consume_message(config: dict, topic: str, simulator: TickStreamSimulator):
     ]
     i = 0
 
-    for message in consumer:
+    prev_trade_count = 0
 
+    for message in consumer:
         tick = message.value
         tick_data = pd.DataFrame([tick])
         tick_data.drop(columns=columns_to_remove, inplace=True, errors='ignore')
-        simulator.process_tick_streaming(tick_data)
-        time.sleep(1)
+        simulator.run(tick_data)
+
+
+        trade_log = simulator.get_trading_log()
+        if len(trade_log) > prev_trade_count:
+            new_trades = trade_log[prev_trade_count:]
+            new_trades_df = pd.DataFrame(new_trades, columns=['Date', 'Position Type', 'Entry Price', 'Exit Price', 'PnL'])
+
+            # Append only new trades
+            new_trades_df.to_csv('trade_log.csv', mode='a', header=not os.path.exists('trade_log.csv'), index=False)
+
+            prev_trade_count = len(trade_log)
 
         i += 1
-        if i >= 3000:
-            simulator.get_trading_log()  # Stop after 60 messages (1 minute)
+        if i >= 1000:
             break
+
+    time.sleep(1)
 
 
 

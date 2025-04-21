@@ -10,6 +10,7 @@ class TickStreamSimulator:
         self.tick_buffer = []
         self.current_window_start = None
         self.strategy = TradingStrategy()
+        self.data= pd.DataFrame()
 
     def get_data_from_last_date(self, current_tick_data):
         current_date = pd.to_datetime(current_tick_data['datetime'].iloc[0])
@@ -25,23 +26,40 @@ class TickStreamSimulator:
 
         db_info = load_data()
         connection = create_connection(db_info)
-        last_date_data = process_data(get_data_from_db(connection, yesterday.date()))
+        last_date_data = process_data(get_data_from_db(connection, yesterday.date(),current_date.date()))
         last_date_data_5T = aggregate_to_interval(last_date_data, "5T")
         return last_date_data_5T
 
     def parse_row(self, row):
         row_dict = {}
+
         for col in ['datetime_str', 'latest_matched_price', 'latest_matched_quantity']:
-            if 'price' in col or 'quantity' in col:
-                val = ast.literal_eval(row[col])
+            val_raw = row[col]
+
+            # Only try literal_eval on fields that are supposed to be dictionaries
+            if col in ['latest_matched_price', 'latest_matched_quantity']:
+                if isinstance(val_raw, str):
+                    try:
+                        val = ast.literal_eval(val_raw)
+                    except Exception as e:
+                        raise ValueError(f"Failed to parse {col} with value {val_raw}\nError: {e}")
+                else:
+                    val = val_raw
+
                 row_dict[col + '_value'] = val.get('value') if isinstance(val, dict) else None
             else:
-                row_dict[col] = row[col]
+                row_dict[col] = val_raw  # for datetime_str, just assign directly
 
-        parsed_datetime = pd.to_datetime(row_dict['datetime_str'], format="%d/%m/%Y %H:%M:%S")
-        row_dict['datetime'] = parsed_datetime
-        row_dict['datetime_str'] = parsed_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        # Safely parse datetime
+        try:
+            parsed_datetime = pd.to_datetime(row_dict['datetime_str'], format="%d/%m/%Y %H:%M:%S")
+            row_dict['datetime'] = parsed_datetime
+            row_dict['datetime_str'] = parsed_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception as e:
+            raise ValueError(f"Failed to parse datetime_str: {row_dict['datetime_str']}\nError: {e}")
+
         return row_dict
+
 
     def preprocess_tick(self, row_raw_data):
         clean = self.parse_row(row_raw_data)
@@ -88,14 +106,28 @@ class TickStreamSimulator:
         new_bar_df = None
         if tick_time - self.current_window_start >= timedelta(minutes=5):
             new_bar_df = self.convert_to_5min_bars(self.tick_buffer, ticker_symbol)
+            print(f"New bar created: {new_bar_df}")
             self.tick_buffer.clear()
             self.current_window_start = None
-
-        # You can insert strategy bar-handling logic here
-        if new_bar_df is not None:
-            self.strategy.handle_bar(new_bar_df)
 
         return new_bar_df
     
     def get_trading_log(self):
-        return self.strategy.get_trading_log()  
+        return self.strategy.get_trade_log() 
+
+
+    def run(self, tick_data):
+        new_bar_df = None
+        processed_data = self.preprocess_tick(tick_data.iloc[0])
+        print(f"Processed data: {processed_data}")
+        if len(self.data) == 0:
+            last_data = self.get_data_from_last_date(processed_data)
+            if last_data is not None:
+                self.data = pd.concat([self.data, last_data], ignore_index=True)
+
+        new_bar_df = self.process_tick_streaming(processed_data)
+
+        if new_bar_df is not None and not new_bar_df.empty:
+            self.data= pd.concat([self.data, new_bar_df], ignore_index=True)
+            latest_bar = new_bar_df.iloc[-1]
+            self.strategy.process_tick(latest_bar, self.data)

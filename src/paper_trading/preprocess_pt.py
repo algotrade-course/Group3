@@ -25,7 +25,7 @@ def create_connection (db_info):
     )
     return con
 
-def get_data_from_db(connection, start_date):
+def get_data_from_db(connection, start_date, end_date):
     query=f"""
             SELECT 
             m.datetime::DATE AS date,
@@ -53,7 +53,7 @@ def get_data_from_db(connection, start_date):
         INNER JOIN "quote"."matchedvolume" tb 
             ON m.tickersymbol = tb.tickersymbol 
             AND m.datetime = tb.datetime
-        WHERE m.datetime::DATE = DATE '{start_date}'
+        WHERE m.datetime::DATE BETWEEN DATE '{start_date}' AND DATE '{end_date}'
         AND m.tickersymbol LIKE 'VN30F%'
         ORDER BY m.datetime, m.tickersymbol;
 
