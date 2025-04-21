@@ -62,6 +62,8 @@ def consume_message(config: dict, topic: str, simulator: TickStreamSimulator):
             break
 
     time.sleep(1)
+    
+    consumer.seek_to_beginning()
 
 
 
@@ -71,3 +73,4 @@ if __name__ == "__main__":
     strategy = TradingStrategy()
     simulator=TickStreamSimulator()  
     consume_message(config, topic, simulator)
+    
