@@ -27,16 +27,6 @@ def calculate_rsi(df, column='Close', period=9):
     rsi = 100 - (100 / (1 + rs))
     return pd.Series(rsi, index=df.index)
 
-
-def calculate_vwap(df):
-    df = df.dropna().copy()
-    df = df[df['Volume'] > 0].copy()
-    typical_price = (df['High'] + df['Low'] + df['Close']) / 3
-    vwap_series = (typical_price * df['Volume']).cumsum() / df['Volume'].cumsum()
-    return vwap_series.iloc[-1]
-
-
-
 def calculate_atr(data, period=14):
     tr = pd.concat([
         data["High"] - data["Low"],
@@ -44,48 +34,6 @@ def calculate_atr(data, period=14):
         (data["Low"] - data["Close"].shift()).abs()
     ], axis=1).max(axis=1)
     return tr.rolling(window=period).mean()
-
-
-def check_volume_trend(data, direction="LONG"):
-    avg_volume = data['Volume'].rolling(15).mean()
-    if direction == "LONG":
-        return data['Volume'].iloc[-1] > avg_volume.iloc[-1] * 1.05
-    return data['Volume'].iloc[-1] < avg_volume.iloc[-1] * 0.95
-
-
-def detect_trend(data, short_period=10, long_period=50, column='Close'):
-    ema_short = calculate_ema(data, column, short_period)
-    ema_long = calculate_ema(data, column, long_period)
-    atr = calculate_atr(data)
-    sideway = (ema_short - ema_long).abs().rolling(window=10).mean() < atr * 0.2
-    return [sideway.iloc[-1], check_volume_trend(data)]
-
-def calculate_adx(data, period=14):
-    raw_plus_dm = data['High'].diff()
-    raw_minus_dm = -data['Low'].diff()
-
-    plus_dm = raw_plus_dm.copy()
-    minus_dm = raw_minus_dm.copy()
-
-    plus_condition = (raw_plus_dm > 0) & (raw_plus_dm > raw_minus_dm)
-    minus_condition = (raw_minus_dm > 0) & (raw_minus_dm > raw_plus_dm)
-
-    plus_dm[~plus_condition] = 0
-    minus_dm[~minus_condition] = 0
-
-    tr = pd.concat([
-        data['High'] - data['Low'],
-        (data['High'] - data['Close'].shift()).abs(),
-        (data['Low'] - data['Close'].shift()).abs()
-    ], axis=1).max(axis=1)
-
-    plus_di = 100 * (plus_dm.ewm(alpha=1/period, adjust=False).mean() / tr.ewm(alpha=1/period, adjust=False).mean())
-    minus_di = 100 * (minus_dm.ewm(alpha=1/period, adjust=False).mean() / tr.ewm(alpha=1/period, adjust=False).mean())
-    dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-    adx = dx.ewm(alpha=1/period, adjust=False).mean()
-    return adx
-
-
 
 #================================================================================================#
 
@@ -104,7 +52,6 @@ def close_positions(data, cur_price, holdings):
     _, entry_price, _, position_type, _, _ , ticketsymbol= holdings
     pnl = (cur_price - entry_price) if position_type == "LONG" else (entry_price - cur_price)
 
-    atr = calculate_atr(data).iloc[-1]
     return [], round(pnl,3)
 
 def calculate_pnl_after_fee(pnl, contract_size=100):
@@ -113,7 +60,7 @@ def calculate_pnl_after_fee(pnl, contract_size=100):
     return profit_in_cash
 
 
-def open_position_type(data, cur_price, ema_periods, rsi_period):
+def open_position_type(data, cur_price, ema_periods, rsi_period, vol_window, vol_thres, rsi_upper_threshold, rsi_lower_threshold):
     ema10 = calculate_ema(data, 'Close', ema_periods[0])
     ema30 = calculate_ema(data, 'Close', ema_periods[1])
     rsi = calculate_rsi(data, 'Close', rsi_period)
@@ -122,12 +69,12 @@ def open_position_type(data, cur_price, ema_periods, rsi_period):
         return 0  # not enough data
 
     current_vol = data['Volume'].iloc[-1]
-    avg_vol = data['Volume'].rolling(window=10).mean().iloc[-1]
+    avg_vol = data['Volume'].rolling(window=vol_window).mean().iloc[-1]
 
     # Trend and momentum confirmation
-    long_trend = ema10.iloc[-1] > ema30.iloc[-1] and cur_price > ema10.iloc[-1] and rsi.iloc[-1] > 55
-    short_trend = ema10.iloc[-1] < ema30.iloc[-1] and cur_price < ema10.iloc[-1] and rsi.iloc[-1] < 45
-    strong_volume = current_vol > 1.2 * avg_vol
+    long_trend = ema10.iloc[-1] > ema30.iloc[-1] and cur_price > ema10.iloc[-1] and rsi.iloc[-1] > rsi_upper_threshold
+    short_trend = ema10.iloc[-1] < ema30.iloc[-1] and cur_price < ema10.iloc[-1] and rsi.iloc[-1] < rsi_lower_threshold
+    strong_volume = current_vol > vol_thres * avg_vol
 
     if long_trend and strong_volume:
         return 1  # Long
@@ -137,12 +84,11 @@ def open_position_type(data, cur_price, ema_periods, rsi_period):
         return 0  # Do nthing
 
 
-
-def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
+def close_position_type(data, cur_price, holdings, ema_periods, rsi_period, atr_period, max_loss, min_profit, atr_multiplier, rsi_exit_threshold_range):
     ema10 = calculate_ema(data, 'Close', ema_periods[0])
     ema30 = calculate_ema(data, 'Close', ema_periods[1])
     rsi = calculate_rsi(data, 'Close', rsi_period)
-    atr = calculate_atr(data).iloc[-1]
+    atr = calculate_atr(data,atr_period).iloc[-1]
     
     if pd.isna(rsi.iloc[-1]) or pd.isna(ema10.iloc[-1]) or pd.isna(ema30.iloc[-1]):
         return 0
@@ -154,9 +100,9 @@ def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
     position_type = holdings[3].upper()
     
     # Configurable thresholds
-    max_loss = 3.0
-    min_profit = 0.5
-    atr_multiplier = 1.5
+    # max_loss = 3.0
+    # min_profit = 0.5
+    # atr_multiplier = 1.5
 
     if position_type == "LONG":
         pnl = cur_price - entry_price
@@ -165,8 +111,7 @@ def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
         if pnl <= -max_loss:
             return 1
         
-        # Strong revErsal signal: price below EMA30 and RSI < 50
-        if cur_price < ema30.iloc[-1] and rsi.iloc[-1] < 50:
+        if cur_price < ema30.iloc[-1] and rsi.iloc[-1] < rsi_exit_threshold_range:
             return 1
 
         # Trailing stop if profitable
@@ -183,8 +128,7 @@ def close_position_type(data, cur_price, holdings, ema_periods, rsi_period):
         if pnl <= -max_loss:
             return 2
 
-        # Strong reversal signal: price above EMA30 and RSI > 50
-        if cur_price > ema30.iloc[-1] and rsi.iloc[-1] > 50:
+        if cur_price > ema30.iloc[-1] and rsi.iloc[-1] > rsi_exit_threshold_range:
             return 2
 
         if pnl > min_profit:
