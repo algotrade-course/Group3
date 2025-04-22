@@ -265,7 +265,7 @@ For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 
 python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters_out_sample.csv
 ```
 
-### Out-of-sample Backtesting Reuslt
+### Out-of-sample Backtesting Result
 After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
 
 | Sample Index | Sharpe Ratio | Maximum Drawdown (MDD) |
@@ -277,6 +277,21 @@ After running the command below, we obtained the Sharpe Ratio and Maximum Drawdo
 | 2358   | 1.4416       | -9.66%                  |
 
 ![Diagram](/figures/all_backtests_out_sample.png)
+### Sample 271 Result
+![Diagram](/figures/sample_271.png)
+
+### Sample 974 Result
+![Diagram](/figures/sample_974.png)
+
+### Sample 1634 Result
+![Diagram](/figures/sample_1634.png)
+
+### Sample 2358 Result
+![Diagram](/figures/sample_1634.png)
+
+### Sample 2500 Result
+![Diagram](/figures/sample_1634.png)
+
 ## Paper Trading
 All the code in paper trading is in the paper_trading folder
 
