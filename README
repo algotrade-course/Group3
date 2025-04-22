@@ -295,7 +295,7 @@ The highest parameter for the outsample is
 All the code in paper trading is in the paper_trading folder
 
  ```
- cd paper_trading
+ cd src/paper_trading
  python paper_trading.py
  ```
 We have configured the paper trading environment using incoming messages from Kafka in combination with historical data retrieved from the database. However, the current backtesting implementation does not support dynamic parameter adjustment and is operating with a fixed set of parameters.
