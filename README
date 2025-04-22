@@ -1,14 +1,9 @@
-# Plutus Project Template
-
-Template repository of a Plutus Project.
-
-This templte project sturcture also specifies how to store and structure the source code and report of a standard Plutus Project.
-
-This `README.md` file serves as an example how a this will look like in a standard Plutus project. Below listed out the sample section.
-
+# Group 03
+- Pham Vo Quynh Nhu - 21125052
+- Ho Viet Bao Long - 21125071
+- Nguyen Phuc Bao Uyen - 21125146
 ## Abstract
-- Summarize the project: motivation, methods, findings, etc. 
-
+This study introduces a rule-based trading strategy for VN30F1M, using technical indicators to define precise entry and exit points for long and short positions. Long entries rely on short-term EMAs crossing above long-term EMAs, high RSI, and strong volume, while short entries occur under opposite conditions. Exits are governed by strict rules, including stop-loss limits, EMA cross reversals, RSI shifts, and an ATR-based trailing stop. The strategy aims to enhance trade consistency and risk management in a Vietnam derivatives market.
 ## Introduction
 - Briefly introduce the project.
 - Problem statement, research question or the hypothesis.
@@ -59,7 +54,16 @@ Where:
 
 
 ## Trading (Algorithm) Hypotheses
+The trading strategy focuses on trend-following and momentum signals to determine entry points. A position is only opened when sufficient historical data is available and all specified conditions are met. For a LONG position: a short-term EMA above the long-term EMA, price above the short EMA, RSI above a set upper threshold, and strong volume. A SHORT position is triggered under the opposite conditions, indicating a bearish trend with high trading activity. Only one position is held at a time, ensuring clear directional exposure.
 
+### Preconditions
+- The starting balance is 40,000,000 VND
+
+- The portfolio holds only one position at a time
+
+- Only one action is allowed per trade: either Long or Short
+
+### Hypotheses
 Generally, the decision-making process of the algorithm is driven by the following parameters:
 
 | Parameter            | Description                                                                 |
@@ -77,18 +81,18 @@ Generally, the decision-making process of the algorithm is driven by the followi
 | `VOLUME_WINDOW`      | Number of bars used to compute rolling average volume.                      |
 | `RSI_EXIT_THRESHOLD` | RSI value used to help decide when to exit an active trade.                 |
 
-There are two main components to the hypothesis: Criteria for opening a position and Criteria for closing a position.
+**There are two main components to the hypothesis: Criteria for opening a position and Criteria for closing a position.**
 
 ### Opening a Position
-- No position is opened if either:
+- **No position is opened if either:**
     - There is insufficient historical data (e.g., not enough bars to calculate RSI or EMA), or
     - None of the entry conditions are satisfied.
-- Open a `LONG` position when all of the following conditions are met: 
+- **Open a** `LONG` **position when all of the following conditions are met:** 
     - EMA_SHORT is greater than EMA_LONG (indicating an uptrend),
     - CURRENT_PRICE is above EMA_SHORT,
     - RSI exceeds the RSI_UPPER_THRESHOLD,
     - CURRENT_VOLUME is greater than VOLUME_THRESHOLD $\times$ AVERAGE_VOLUME (indicating strong market interest).
-- Open a `SHORT` position when all of the following conditions are met:
+- **Open a** `SHORT` **position when all of the following conditions are met:**
     - EMA_SHORT is less than EMA_LONG (indicating a downtrend).
     - CURRENT_PRICE is below EMA_SHORT.
     - RSI falls below the RSI_LOWER_THRESHOLD.
@@ -96,16 +100,16 @@ There are two main components to the hypothesis: Criteria for opening a position
 
 ### Close position:
 
-- No position is closed if none of the exit conditions are triggered.
-- Close a `LONG` position when any of the following conditions apply
+- **No position is closed if none of the exit conditions are triggered.**
+- **Close a** `LONG` **position when any of the following conditions apply**
     - The current loss exceeds the MAX_LOSS threshold.
     - CURRENT_PRICE drops below EMA_LONG.
     - RSI falls below the RSI_EXIT_THRESHOLD,
-    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE < max(ENTRY_PRICE + MIN_PROFIT,PREVIOUS_CLOSE - ATR ?? ATR_MULTIPLIER).
-- Close `SHORT` position if:
+    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE < max(ENTRY_PRICE + MIN_PROFIT,PREVIOUS_CLOSE - ATR × ATR_MULTIPLIER).
+- **Close** `SHORT` **position when any of the following conditions apply:**
     - The current loss exceeds the MAX_LOSS threshold.
     - CURRENT_PRICE rises above EMA_LONG,
-    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE > min(ENTRY_PRICE - MIN_PROFIT, PREVIOUS_CLOSE + ATR ?? ATR_MULTIPLIER)
+    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE > min(ENTRY_PRICE - MIN_PROFIT, PREVIOUS_CLOSE + ATR × ATR_MULTIPLIER)
 
 ## Data
 - Data source: Algotrade internship database
@@ -267,7 +271,6 @@ For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 
 python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters_out_sample.csv
 ```
 
-### Out-of-sample Backtesting Result
 After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
 
 | Sample Index | Sharpe Ratio | Maximum Drawdown (MDD) |
@@ -276,7 +279,14 @@ After running the command below, we obtained the Sharpe Ratio and Maximum Drawdo
 | 1634    | -0.0494      | -25.98%                 |
 | 974    | 0.3945       | -17.39%                 |
 | 2500    | 1.6497       | -8.00%                  |
-| 2358   | 1.4416       | -9.66%                  |
+| 2358   | **1.4416**       | -9.66%                  |
+
+![Diagram](/figures/all_backtests_out_sample.png)
+
+The highest parameter for the outsample is 
+| SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold | Sharpe        | mdd             | net_profit |
+|-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|
+| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    |
 
 ## Paper Trading
 All the code in paper trading is in the paper_trading folder
@@ -293,13 +303,11 @@ We have configured the paper trading environment using incoming messages from Ka
 
 The message received from Kafka is preprocessed to align with the format of the above data.
 
+
 ## Conclusion
-- What is the conclusion?
-- Optional
+This trading strategy utilizes a combination of trend and momentum indicators—specifically EMA, RSI, and volume—to identify high-probability entry points in the market. The project offers a basic view of the algorithmic trading workflow. However, the final results can vary significantly depending on the dataset, so no definitive conclusions can be drawn at this stage. In the future, we aim to further optimize the process to uncover more concrete evidence that supports our hypotheses.
 
 ## Reference
-- All the reference goes here.
+- [Investopedia: Exponential Moving Average (EMA)](https://www.investopedia.com/terms/e/ema.asp)  
+- [AlgoTrade Hub: Thực tiễn giao dịch thuật toán tại thị trường chứng khoán Việt Nam](https://hub.algotrade.vn/knowledge-hub/thuc-tien-giao-dich-thuat-toan-tai-thi-truong-chung-khoan-viet-nam/)
 
-## Other information
-- Link to the Final Report (Paper) should be somewhere in the `README.md` file.
-- Please make sure this file is relatively easy to follow.
