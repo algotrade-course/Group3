@@ -253,13 +253,12 @@ python src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
 
 The set of configurations was evaluated using the following scoring formula:
 $$
-Score = Sharpe - \alpha \cdot |MDD| + \beta \cdot \tanh\left(\frac{NetProfit}{scale}\right)
+Score = Sharpe - \alpha \cdot |MDD|
 $$
 - $\alpha = 0.5$
 - $\beta = 0.01$
-- $scale = 10,000,000$ 
 
-This scoring function considers the Sharpe ratio as the primary evaluation metric, while the impacts of Maximum Drawdown and Net Profit are adjusted using the weights $\alpha$ and $\beta$, respectively. The scale is set to 10,000,000 to normalize the Net Profit and prevent it from overpowering the other components. Run the following command to compute the scores based on the results:
+This scoring function considers the Sharpe ratio as the primary evaluation metric, while the impacts of Maximum Drawdown is adjusted using the weights $\alpha$. Run the following command to compute the scores based on the results:
 ```
 python src/optimization.py -s src/OPTIMIZATION_RANDOM/summary.csv -f src/OPTIMIZATION_RESULTS/scoreModel.csv
 ```
@@ -284,11 +283,11 @@ The figure below shows the distribution of the scores. Most models achieved scor
 After optimization, we identified the top 5 parameter sets with the highest scores. The results are saved in `src/parameters_out_sample.csv`, and the top 5 are listed below.
 | SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold | Sharpe        | mdd             | net_profit | score |
 |-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|-------------|
-| 271         | 10        | 25       | 18         | 25        | 70        | 14          | 2.5      | 1           | 1         | 1.2               | 20             | 45                  | 2.782016973    | -0.07720320466   | 29702000    | 2.75 |
-| 1634        | 8         | 40       | 14         | 35        | 70        | 21          | 5        | 1           | 1         | 0.8               | 10             | 45                  | 2.717278496    | -0.07548636353   | 41320000    | 2.69 |
-| 974         | 5         | 20       | 18         | 35        | 70        | 14          | 4.5      | 1           | 1         | 0.8               | 15             | 50                  | 2.674389187    | -0.06388517122   | 36240000    | 2.65 |
-| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    | 2.57 |
-| 2358        | 10        | 30       | 18         | 25        | 70        | 21          | 2        | 0.5         | 1         | 0.8               | 15             | 55                  | 2.573981968    | -0.07130522918   | 30525000    | 2.55 |
+| 271         | 10        | 25       | 18         | 25        | 70        | 14          | 2.5      | 1           | 1         | 1.2               | 20             | 45                  | 2.782016973    | -0.07720320466   | 29702000    | 2.74 |
+| 1634        | 8         | 40       | 14         | 35        | 70        | 21          | 5        | 1           | 1         | 0.8               | 10             | 45                  | 2.717278496    | -0.07548636353   | 41320000    | 2.68 |
+| 974         | 5         | 20       | 18         | 35        | 70        | 14          | 4.5      | 1           | 1         | 0.8               | 15             | 50                  | 2.674389187    | -0.06388517122   | 36240000    | 2.64 |
+| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    | 2.55 |
+| 2358        | 10        | 30       | 18         | 25        | 70        | 21          | 2        | 0.5         | 1         | 0.8               | 15             | 55                  | 2.573981968    | -0.07130522918   | 30525000    | 2.54 |
  
 For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 

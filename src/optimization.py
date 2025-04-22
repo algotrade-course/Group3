@@ -157,10 +157,10 @@ def optimize_strategy(data, optimization_json="optimization.json", result_dir="O
     return pd.DataFrame(results).sort_values('Sharpe', ascending=False)
 
 def score_and_visualize(input_csv_path, output_csv_path="outscore.csv"):
-    def calculate_score(sharpe, mdd, net_profit, alpha=0.5, beta=0.01, scale=1e7):
+    def calculate_score(sharpe, mdd, net_profit, alpha=0.5, beta=0.01):
         if np.isnan(sharpe) or np.isnan(mdd) or np.isnan(net_profit):
             return -np.inf
-        score = sharpe - alpha * abs(mdd) + beta * np.tanh(net_profit / scale)
+        score = sharpe - alpha * abs(mdd)
         return score
 
     df = pd.read_csv(input_csv_path)
