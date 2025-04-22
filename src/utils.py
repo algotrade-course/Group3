@@ -132,7 +132,7 @@ def close_position_type(data, cur_price, holdings, ema_periods, rsi_period, atr_
             return 2
 
         if pnl > min_profit:
-            trailing_stop = max(entry_price - min_profit, data['Close'].iloc[-2] - atr * atr_multiplier)
+            trailing_stop = min(entry_price - min_profit, data['Close'].iloc[-2] + atr * atr_multiplier)
             if cur_price > trailing_stop:
                 return 2
 

@@ -127,7 +127,7 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
     return portfolio_df, trade_log_df, sharpeRatio, mdd
 
 
-def run_backtests(data_path: str,  result_dir: str, plot_path: str):
+def run_backtests(data_path: str,  result_dir: str, plot_path: str, params_path: str):
     data = pd.read_csv(data_path)
 
     strategy_params = pd.read_csv(params_path)
@@ -176,6 +176,7 @@ if __name__ == "__main__":
         data_path=data_path,
         result_dir=args.result_dir,
         plot_path=plot_path,
+        params_path=params_path
     )   
     print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {plot_path}.")
 
