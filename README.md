@@ -276,7 +276,7 @@ The following figure illustrates the distribution of net profits across all test
 The figure below shows the relationship between the Sharpe ratio and the net profit of the tested configurations. The results suggest a linear correlation, indicating that higher Sharpe ratios tend to be associated with greater net profits.
 ![Diagram](/figures/RelationSharpeAndNet.png)
 
-The figure below shows the distribution of the scores. Most models achieved scores in the range of 1.0 to 1.5. The highest score reached around 2.75, while the lowest was approximately -0.64.
+The figure below shows the distribution of the scores. Most models achieved scores in the range of 1.0 to 1.5. The highest score reached around 2.74, while the lowest was approximately -0.64.
 ![Diagram](/figures/scoreModel_score_distribution.png)
 
 ## Out-of-sample Backtesting
