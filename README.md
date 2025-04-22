@@ -198,8 +198,8 @@ For backtesting, we use data from the period 2023-01-01 to 2023-12-01 with a 5T 
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
 - `--parameters`: specify the directory for parameters.
 ```
-python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters_in_sample.csv
-python src/evaluation.py --input_csv result_in_sample/portfolio_values_10.0_30.0_14.csv --output_file result_in_sample/plot_10_30_14.png 
+python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir src/result_in_sample --parameters src/parameters_in_sample.csv
+python src/evaluation.py --input_csv src/result_in_sample/portfolio_values_10.0_30.0_14.csv --output_file src/result_in_sample/plot_10_30_14.png 
 
 ```
 ### In-sample Backtesting Result

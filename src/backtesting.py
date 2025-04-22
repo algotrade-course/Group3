@@ -155,6 +155,7 @@ def run_backtests(data_path: str,  result_dir: str, plot_path: str, params_path:
         print(f'SHARPE RATIO: {sharpe_ratio:.4f}')
         print(f'MDD: {mdd:.2%}')
     plot_all_portfolio_results(result_dir=result_dir, output_file=plot_path)
+    plot_backtesting_results(result_dir, plot_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run backtests")
@@ -176,7 +177,4 @@ if __name__ == "__main__":
         plot_path=plot_path,
         params_path=params_path
     )   
-
     print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {plot_path}.")
-
-# python backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result 

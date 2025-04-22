@@ -45,21 +45,23 @@ def sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=252):
 
     return mean_excess / std_excess * np.sqrt(periods_per_year)
 
-def plot_backtesting_results(portfolio_values, output_file):
-    if not portfolio_values or len(portfolio_values) < 2:
-        print("Not enough data to plot backtesting results.")
+def plot_backtesting_results(input_csv, output_file="result/backtests.png"):
+    # Read the CSV
+    df = pd.read_csv(input_csv)
+
+    if "Date" not in df.columns or "Portfolio Value" not in df.columns:
+        print(f"Error: {input_csv} is missing required columns 'Date' or 'Portfolio Value'.")
         return
 
-    try:
-        dates = pd.to_datetime([x["Date"] for x in portfolio_values])
-        portfolio_series = np.array([x["Portfolio Value"] for x in portfolio_values])
-    except (KeyError, ValueError) as e:
-        print(f"Invalid portfolio data: {e}")
-        return
+    # Extract data
+    dates = pd.to_datetime(df["Date"])
+    portfolio_series = df["Portfolio Value"]
 
+    # Calculate metrics
     mdd, drawdown = maximumDrawdown(portfolio_series)
     sharpe = sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=len(portfolio_series))
 
+    # Plotting
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax1.plot(dates, portfolio_series, label="Portfolio Value", color="blue", linewidth=2)
     ax1.set_xlabel("Date")
@@ -79,12 +81,15 @@ def plot_backtesting_results(portfolio_values, output_file):
     ax2.legend(loc="lower left")
 
     plt.xticks(rotation=45)
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    plt.savefig(output_file, dpi=300)
-    print(f"Saved plot to {output_file}")
     plt.tight_layout()
 
-    # plt.show()
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Add suffix "_mdd_sharpe" before saving
+    output_file = output_file.replace(".png", "_mdd_sharpe.png")
+    plt.savefig(output_file, dpi=300)
+    print(f"Saved plot to {output_file}")
 
 
 def plot_all_portfolio_results(result_dir="result", output_file="result/all_backtests.png"):
