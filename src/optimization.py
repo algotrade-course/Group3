@@ -76,7 +76,6 @@ def optimize_strategy(data, optimization_json="optimization.json", result_dir="O
     summary_path = os.path.join(result_dir, 'summary.csv')
     ensure_summary_file(summary_path)
 
-    # load parameter space
     with open(optimization_json, "r") as f:
         pc = json.load(f)
 
@@ -95,11 +94,9 @@ def optimize_strategy(data, optimization_json="optimization.json", result_dir="O
         pc["rsi_exit_threshold_range"]
     ]
 
-    # build and shuffle all combinations
     all_combos = list(product(*param_lists))
     perm = rng.permutation(len(all_combos))
 
-    # limit to MAX_MODELS
     combos_to_run = [all_combos[i] for i in perm[:max_models]]
 
     results = []
@@ -114,7 +111,6 @@ def optimize_strategy(data, optimization_json="optimization.json", result_dir="O
             rsi_exit
         ) = combo
 
-        # run backtest
         portfolio_df, trades_df, sharpe, mdd = backtesting(
             data=data,
             ema_periods=(ema_short, ema_long),
@@ -158,8 +154,39 @@ def optimize_strategy(data, optimization_json="optimization.json", result_dir="O
         trades_df.to_csv(os.path.join(result_dir, f"trade_log_{idx}.csv"), index=False)
         portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{idx}.csv"), index=False)
 
-    # return sorted results
     return pd.DataFrame(results).sort_values('Sharpe', ascending=False)
+
+def score_and_visualize(input_csv_path, output_csv_path="outscore.csv"):
+    def calculate_score(sharpe, mdd, net_profit, alpha=0.5, beta=0.01, scale=1e7):
+        if np.isnan(sharpe) or np.isnan(mdd) or np.isnan(net_profit):
+            return -np.inf
+        score = sharpe - alpha * abs(mdd) + beta * np.tanh(net_profit / scale)
+        return score
+
+    df = pd.read_csv(input_csv_path)
+
+    df["score"] = df.apply(lambda row: calculate_score(row["Sharpe"], row["mdd"], row["net_profit"]), axis=1)
+
+    output_df = df.sort_values(by="score", ascending=False)
+
+    os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
+
+    output_df.to_csv(output_csv_path, index=False)
+
+    plt.figure(figsize=(10, 6))
+    plt.hist(df["score"], bins=50, edgecolor='black')
+    plt.title("Distribution of Optimization Scores")
+    plt.xlabel("Score")
+    plt.ylabel("Frequency")
+    plt.grid(True)
+    plt.tight_layout()
+
+    fig_path = os.path.splitext(output_csv_path)[0] + "_score_distribution.png"
+    plt.savefig(fig_path)
+    plt.show()
+
+    print(f"Output saved to: {output_csv_path}")
+    print(f"Figure saved to: {fig_path}")
 
 
 def main():
@@ -175,6 +202,18 @@ def main():
         "-v", "--visualize",
         metavar="SUMMARY_CSV",
         help="Path to summary.csv to plot your results"
+    )
+    group.add_argument(
+        "-s", "--score",
+        metavar="SUMMARY_CSV",
+        help="Path to summary.csv to calculate for models' score."
+    )
+    
+    parser.add_argument(
+        "-f", "--outscore",
+        metavar="OUTPUT_SCORE_CSV",
+        default="scored_models.csv",
+        help="Path to save the scored output CSV file (used with --score). Default: scored_models.csv"
     )
     
     parser.add_argument(
@@ -196,6 +235,8 @@ def main():
 
     if args.visualize:
         visualization(args.visualize)
+    elif args.score:
+        score_and_visualize(input_csv_path=args.score, output_csv_path=args.outscore)
     else:
         data = pd.read_csv(args.data, parse_dates=True)
         df = optimize_strategy(data, optimization_json=args.parameter, result_dir=args.result_dir, max_models=args.maximum_model)

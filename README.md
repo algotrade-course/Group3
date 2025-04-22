@@ -17,7 +17,7 @@ In this project, we propose an algorithm to automate the trading process in Viet
 
 We tested our hypothesis in two phases: an in-sample test using VN30F1M data from January 3, 2023 to December 21, 2023, and an out-of-sample test using data from January 2, 2024 to December 19, 2024, with an optimization process conducted in between. The initial capital was set at 40,000,000 VND, and the strategy was restricted to holding only one contract at a time. In the in-sample test, the strategy achieved a Sharpe ratio of 1.0846, a maximum drawdown (MDD) of -16.49%, and a net profit of 14,332,000 VND, indicating that the hypothesis holds promise for further optimization. For the optimization process, we first defined a list of possible parameter values and then performed random sampling from the full set of parameter combinations, testing each configuration on the 2023 dataset. We selected the top five parameter sets with the highest Sharpe ratios for further evaluation in the out-of-sample test. The final model was chosen as the one among the top five that yielded the highest Sharpe ratio on the 2024 out-of-sample data. As a result, the selected model achieved a Sharpe ratio of 2.5949 on the in-sample data and 1.6497 on the out-of-sample data.
 
-The remainder of this template is dedicated to describing our implementation process, organized into several key sections. The Background section introduces and explains the main technical indicators used in the algorithm. The Trading Hypotheses section details the proposed algorithm, including how these indicators are combined to determine entry and exit signals.
+The remainder of this template is dedicated to describing our implementation process, organized into several key sections. The Background section introduces and explains the main technical indicators used in the algorithm. The Trading Hypothesis section details the proposed algorithm, including how these indicators are combined to determine entry and exit signals.
 The Data section outlines the data collection process and how the data is utilized in model development and testing. The Implementation section describes the setup and environment used to run the experiments. The In-sample Testing section explains how the initial evaluation was conducted using a default set of parameters. The Optimization section illustrates the process of testing a wide range of parameter combinations and presents the results. The Out-of-sample Testing section evaluates the top-performing parameter sets selected from the optimization phase on unseen data. The Paper Trading section provides a tutorial on deploying the algorithm in a real-time trading simulation. Finally, the Conclusion summarizes our work and key findings.
 ## Background
 
@@ -56,7 +56,7 @@ Where:
 
 
 
-## Trading (Algorithm) Hypotheses
+## Trading (Algorithm) Hypothesis
 The trading strategy focuses on trend-following and momentum signals to determine entry points. A position is only opened when sufficient historical data is available and all specified conditions are met. For a LONG position: a short-term EMA above the long-term EMA, price above the short EMA, RSI above a set upper threshold, and strong volume. A SHORT position is triggered under the opposite conditions, indicating a bearish trend with high trading activity. Only one position is held at a time, ensuring clear directional exposure.
 
 ### Preconditions
@@ -66,7 +66,7 @@ The trading strategy focuses on trend-following and momentum signals to determin
 
 - Only one action is allowed per trade: either Long or Short
 
-### Hypotheses
+### Hypothesis
 Generally, the decision-making process of the algorithm is driven by the following parameters:
 
 | Parameter            | Description                                                                 |
@@ -251,8 +251,21 @@ Do not terminate the program. The figures will appear one after another.
 python src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
 ```
 
+The set of configurations was evaluated using the following scoring formula:
+$$
+Score = Sharpe - \alpha \cdot |MDD| + \beta \cdot \tanh\left(\frac{NetProfit}{scale}\right)
+$$
+- $\alpha = 0.5$
+- $\beta = 0.01$
+- $scale = 10,000,000$ 
+
+This scoring function considers the Sharpe ratio as the primary evaluation metric, while the impacts of Maximum Drawdown and Net Profit are adjusted using the weights $\alpha$ and $\beta$, respectively. The scale is set to 10,000,000 to normalize the Net Profit and prevent it from overpowering the other components. Run the following command to compute the scores based on the results:
+```
+python src/optimization.py -s src/OPTIMIZATION_RANDOM/summary.csv -f src/OPTIMIZATION_RESULTS/scoreModel.csv
+```
+
 ### Optimization Result
-The optimization process took approximately 4.5 hours in total, during which 2,500 parameter combinations were evaluated. The following graphs illustrate the results of the optimization process using VN30F1M data from January 2, 2024, to December 19, 2024.
+The optimization process took approximately 4.5 hours in total, during which 2,500 parameter combinations were evaluated. The following graphs illustrate the results of the optimization process using VN30F1M data from January 3, 2023 to December 21, 2023.
 
 The figure below illustrates the relationship between the Sharpe Ratio and MDD for the 2,500 parameter combinations considered. The highest Sharpe Ratio observed was 2.782, while the lowest was -0.4861. In contrast, the MDD ranged from a maximum of -0.0556 to a minimum of -0.3143.
 
@@ -264,15 +277,18 @@ The following figure illustrates the distribution of net profits across all test
 The figure below shows the relationship between the Sharpe ratio and the net profit of the tested configurations. The results suggest a linear correlation, indicating that higher Sharpe ratios tend to be associated with greater net profits.
 ![Diagram](/figures/RelationSharpeAndNet.png)
 
+The figure below shows the distribution of the scores. Most models achieved scores in the range of 1.0 to 1.5. The highest score reached around 2.75, while the lowest was approximately -0.64.
+![Diagram](/figures/scoreModel_score_distribution.png)
+
 ## Out-of-sample Backtesting
-After optimization, we identified the top 5 parameter sets with the highest Sharpe ratios. The results are saved in `/OPTIMIZATION_RANDOM/parameters.csv`, and the top 5 are listed below.
-| SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold | Sharpe        | mdd             | net_profit |
-|-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|
-| 271         | 10        | 25       | 18         | 25        | 70        | 14          | 2.5      | 1           | 1         | 1.2               | 20             | 45                  | 2.782016973    | -0.07720320466   | 29702000    |
-| 1634        | 8         | 40       | 14         | 35        | 70        | 21          | 5        | 1           | 1         | 0.8               | 10             | 45                  | 2.717278496    | -0.07548636353   | 41320000    |
-| 974         | 5         | 20       | 18         | 35        | 70        | 14          | 4.5      | 1           | 1         | 0.8               | 15             | 50                  | 2.674389187    | -0.06388517122   | 36240000    |
-| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    |
-| 2358        | 10        | 30       | 18         | 25        | 70        | 21          | 2        | 0.5         | 1         | 0.8               | 15             | 55                  | 2.573981968    | -0.07130522918   | 30525000    |
+After optimization, we identified the top 5 parameter sets with the highest scores. The results are saved in `src/parameters_out_sample.csv`, and the top 5 are listed below.
+| SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold | Sharpe        | mdd             | net_profit | score |
+|-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|-------------|
+| 271         | 10        | 25       | 18         | 25        | 70        | 14          | 2.5      | 1           | 1         | 1.2               | 20             | 45                  | 2.782016973    | -0.07720320466   | 29702000    | 2.75 |
+| 1634        | 8         | 40       | 14         | 35        | 70        | 21          | 5        | 1           | 1         | 0.8               | 10             | 45                  | 2.717278496    | -0.07548636353   | 41320000    | 2.69 |
+| 974         | 5         | 20       | 18         | 35        | 70        | 14          | 4.5      | 1           | 1         | 0.8               | 15             | 50                  | 2.674389187    | -0.06388517122   | 36240000    | 2.65 |
+| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    | 2.57 |
+| 2358        | 10        | 30       | 18         | 25        | 70        | 21          | 2        | 0.5         | 1         | 0.8               | 15             | 55                  | 2.573981968    | -0.07130522918   | 30525000    | 2.55 |
  
 For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 
@@ -314,7 +330,7 @@ The message received from Kafka is preprocessed to align with the format of the 
 
 
 ## Conclusion
-This trading strategy utilizes a combination of trend and momentum indicators—specifically EMA, RSI, and volume—to identify high-probability entry points in the market. The project offers a basic view of the algorithmic trading workflow. However, the final results can vary significantly depending on the dataset, so no definitive conclusions can be drawn at this stage. In the future, we aim to further optimize the process to uncover more concrete evidence that supports our hypotheses.
+This trading strategy utilizes a combination of trend and momentum indicators—specifically EMA, RSI, and volume—to identify high-probability entry points in the market. The project offers a basic view of the algorithmic trading workflow. However, the final results can vary significantly depending on the dataset, so no definitive conclusions can be drawn at this stage. In the future, we aim to further optimize the process to uncover more concrete evidence that supports our hypothesis.
 
 ## Reference
 [1] Vietnam News Agency, “Six years of derivative stock market: VN30 index futures contract up 27.46% annually,” VietnamPlus, Aug. 14, 2023. [Online]. Available: https://en.vietnamplus.vn/six-years-of-derivative-stock-market-vn30-index-futures-contract-up-2746-annually-post266231.vnp. [Accessed: Apr. 23, 2025].​
