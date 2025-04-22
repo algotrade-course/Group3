@@ -206,9 +206,9 @@ MDD: -16.49%
 
 ## Optimization
 
-To find out an well performing parameters set for the hypothesis, we performed Random sampling strategy. We first used itertools.product method from Python's standard library to conduct all possible combinations of predefiend set of parameters. Then, we used numpy to randomly take out subset of the all combinations list to test the configuration that yields the best performance based on Sharpe Ratio and Maximum Drawdown (MDD) by running backtesting on each combination in the randomly sampled dataset. Finally, the visualization conducted to analyze the result by using Matplotlib of Python.
+To identify a well-performing set of parameters for our hypothesis, we applied a random sampling approach. Initially, we generated the full set of possible parameter combinations using Python's `itertools.product`, based on predefined ranges. From this comprehensive list, we employed `NumPy` to randomly sample a subset for evaluation. Each sampled configuration was tested through backtesting, and its performance was assessed using the **Sharpe Ratio** and **Maximum Drawdown (MDD)** metrics. The results were then visualized using Python's `Matplotlib` library to facilitate analysis.
 
-There are 12 parameters have been taken into consideration, including: ema_short, ema_long, rsi_range, rsi_lower_threshold, rsi_upper_threshold, atr_period, max_loss, min_profit, atr_multiplier, volume_threshold, volume_window, rsi_exit_threshold. The list of possible values for each parameter are defined in optimization.json file, with the default was:
+In total, twelve parameters were considered in the optimization process: ema_short, ema_long, rsi_range, rsi_lower_threshold, rsi_upper_threshold, atr_period, max_loss, min_profit, atr_multiplier, volume_threshold, volume_window, and rsi_exit_threshold. The range of possible values for each parameter is specified in the `optimization.json` file, with the following defaults:
 
 ```json
 {
@@ -227,16 +227,27 @@ There are 12 parameters have been taken into consideration, including: ema_short
 }
 ```
 
-The performance of model was assessed based on Sharpe ratio, then MDD. That is, we first sort the result by sharpe ratio, then take out 5 model have highest sharpe. 
+To run optimization, run the following command:
+- `-d`: Specify the dataset file to be used
+- `-o`: Location to save the optimization results
+```
+python3 src/optimization.py -d src/data/2023-01-01_to_2023-12-31_by_5T.csv -o src/OPTIMIZATION_RANDOM
+```
 
-- Describe the Optimization step
-    - Optimization process/methods/library
-    - Parameters to optimize
-    - Hyper-parameter of the optimize process
-- Step 5 of the Nine-Step
+To draw the graphs to illustrate the results of optimization process, run the following script:
+- `-v`: Path to summary.csv file created by the optimization process.
+```
+python3 src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
+```
+
+The performance of each model was evaluated primarily using the Sharpe Ratio, followed by Maximum Drawdown (MDD). We first filtered out any model with a Sharpe Ratio below 0.7 or an MDD lower than -30. After this filtering step, we sorted the remaining models by their Sharpe Ratio and selected the top five with the highest values.
+
 ### Optimization Result
-- Brieftly shown the result: table, image, etc.
-- Has link to the Optimization Report
+The optimization process took approximately 4.5 hours in total, during which 2,500 parameter combinations were evaluated.
+
+The figure below illustrates the relationship between the Sharpe Ratio and MDD for the 2,500 parameter combinations considered. The highest Sharpe Ratio observed was 2.782, while the lowest was -0.4861. In contrast, the MDD ranged from a maximum of -0.0556 to a minimum of -0.3143.
+
+![Diagram](/figures/SharpeVSMDD.png)
 
 ## Out-of-sample Backtesting
 After optimization, we identified the top 5 parameter sets with the highest Sharpe ratios. The results are saved in `/OPTIMIZATION_RANDOM/parameters.csv`, and the top 5 are listed below.
