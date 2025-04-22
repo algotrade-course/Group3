@@ -10,10 +10,9 @@ The derivatives market in Vietnam officially launched on August 10, 2017, with t
 
 However, individual investors often tend to be influenced by various factors such as emotions, human error, and slow decision-making and ordering, which can lead to missed opportunities or failure to execute orders at target prices since the investors are unable to monitor the market continuously [2]. These obstacles can be addressed through the use of algorithmic trading, which not only helps overcome the issues mentioned above but also saves time for investors by automating decision-making and order execution [2].
 
-In this project, we propose an algorithm to automate the trading process in Vietnam derivative market. The algorithm are made of from the idea of technical indicator rules, with a combinations of Exponential Moving Averages (EMA), Relative Strength Index (RSI), and ATR (Average True Range), and Volume of the market. The OLHC is collected as candle of 5-minutes of VN30F1M. Particularly, we open position if there is a particular trend occurred (`LONG` or `SHORT`) and verified by a signal of volume is high enough so that . Otherwise, close position acted if the loss is larger than maximum loss boundering, ending of the trend, or trailing signal.
+In this project, we propose an algorithm to automate the trading process in Vietnam derivative market. The algorithm are made of from the idea of technical indicator rules, with a combinations of Exponential Moving Averages (EMA), Relative Strength Index (RSI), and ATR (Average True Range), and Volume of the market. The OLHC is collected as candle of 5-minutes of VN30F1M. Generally, we open a position if a clear trend is identified (LONG or SHORT) and it is confirmed by a sufficiently high volume, indicating strong market participation and increasing the likelihood that the trend is genuine and sustainable rather than a temporary fluctuation. Otherwise, close position acted if the loss is larger than maximum loss boundering, ending of the trend, or trailing signal. 
 
 We tested our hypothesis in two phases: an in-sample test using VN30F1M data from January 3, 2023 to December 21, 2023, and an out-of-sample test using data from January 2, 2024 to December 19, 2024, with an optimization process conducted in between. In the in-sample test, the strategy achieved a Sharpe ratio of 1.0846, a maximum drawdown (MDD) of -16.49%, and a net profit of 14,332,000 VND, indicating that the hypothesis holds promise for further optimization. For the optimization process, we first defined a list of possible parameter values and then performed random sampling from the full set of parameter combinations, testing each configuration on the 2023 dataset. We selected the top five parameter sets with the highest Sharpe ratios for further evaluation in the out-of-sample test. The final model was chosen as the one among the top five that yielded the highest Sharpe ratio on the 2024 out-of-sample data. As a result, the selected model achieved a Sharpe ratio of 2.5949 on the in-sample data and 1.6497 on the out-of-sample data.
-
 
 The remainder of this template is dedicated to describing our implementation process, organized into several key sections. The Background section introduces and explains the main technical indicators used in the algorithm. The Trading Hypotheses section details the proposed algorithm, including how these indicators are combined to determine entry and exit signals.
 The Data section outlines the data collection process and how the data is utilized in model development and testing. The Implementation section describes the setup and environment used to run the experiments. The In-sample Testing section explains how the initial evaluation was conducted using a default set of parameters. The Optimization section illustrates the process of testing a wide range of parameter combinations and presents the results. The Out-of-sample Testing section evaluates the top-performing parameter sets selected from the optimization phase on unseen data. The Paper Trading section provides a tutorial on deploying the algorithm in a real-time trading simulation. Finally, the Conclusion summarizes our work and key findings.
@@ -22,38 +21,38 @@ The Data section outlines the data collection process and how the data is utiliz
 ### EMA (Exponential Moving Average)
 The Exponential Moving Average (EMA) is a weighted moving average that gives more weight to recent prices [3]. It is calculated as:
 
-$$
+\[
 EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})
-$$
+\]
 
 Where:
-- $ EMA_t $ is the EMA at time $ t $,
-- $ EMA_{t-1} $ is the previous EMA value,
-- $ P_t $ is the current price at time $ t $,
-- $ \alpha $ is the smoothing factor, defined as $ \alpha = \frac{2}{N+1} $,
-- $ N $ is the number of periods.
+- \( EMA_t \) is the EMA at time \( t \),
+- \( EMA_{t-1} \) is the previous EMA value,
+- \( P_t \) is the current price at time \( t \),
+- \( \alpha \) is the smoothing factor, defined as \( \alpha = \frac{2}{N+1} \),
+- \( N \) is the number of periods.
 
 
 ### RSI (Relative Strength Index)
-RSI measures momentum by comparing recent gains to recent losses, with values between 0 and 100. It is calculated as:
+RSI measures momentum by comparing recent gains to recent losses, with values between 0 and 100 [4]. It is calculated as:
 
-$$
+\[
 RSI = 100 - \left( \frac{100}{1 + RS} \right)
-$$
+\]
 
 Where:
-- $RS$ is the average gain of up periods divided by the average loss of down periods.
+- \(RS\) is the average gain of up periods divided by the average loss of down periods.
 
 ### ATR (Average True Range)
-The Average True Range (ATR) measures market volatility. The formula is:
+The Average True Range (ATR) measures market volatility [5]. The formula is:
 
-$$
+\[
 ATR = \frac{1}{N} \sum_{i=1}^{N} \text{True Range}_i
-$$
+\]
 
 Where:
-- $N$ is the number of periods,
-- $\text{True Range}_i$ is the maximum of:
+- \(N\) is the number of periods,
+- \(\text{True Range}_i\) is the maximum of:
   - Current high - current low,
   - Absolute value of current high - previous close,
   - Absolute value of current low - previous close.
@@ -133,7 +132,7 @@ Generally, the decision-making process of the algorithm is driven by the followi
 The resulting file will be saved under the name: `<start_date>_to_<end_date>_by_<tick_interval>.csv`
 For example:
 ```
-src/data/2023-01-01_to_2023-12-31_by_5T.csv
+**src/data/2023-01-01_to_2023-12-31_by_5T.csv**
 ```
 The CSV file will include the following columns:
 - ``Date``: The date of the interval
@@ -205,8 +204,8 @@ For backtesting, we use data from the period 2023-01-01 to 2023-12-01 with a 5T 
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
 - `--parameters`: specify the directory for parameters.
 ```
-python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir src/result_in_sample --parameters src/parameters_in_sample.csv
-python src/evaluation.py --input_csv src/result_in_sample/portfolio_values_10.0_30.0_14.csv --output_file src/result_in_sample/plot_10_30_14.png 
+python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters_in_sample.csv
+python src/evaluation.py --input_csv result_in_sample/portfolio_values_10.0_30.0_14.csv --output_file result_in_sample/plot_10_30_14.png 
 
 ```
 ### In-sample Backtesting Result
@@ -324,3 +323,6 @@ This trading strategy utilizes a combination of trend and momentum indicators—
 
 [3] J. Chen, “Exponential Moving Average (EMA),” Investopedia, May 3, 2023. [Online]. Available: https://www.investopedia.com/terms/e/ema.asp. [Accessed: Apr. 23, 2025].
 
+[4] J. Chen, “Relative Strength Index (RSI),” Investopedia, May 3, 2023. [Online]. Available: https://www.investopedia.com/terms/r/rsi.asp. [Accessed: Apr. 23, 2025].
+
+[5] A. HAYES, “Average True Range (ATR),” Investopedia, May 4, 2023. [Online]. Available: https://www.investopedia.com/terms/a/atr.asp. [Accessed: Apr. 23, 2025].
