@@ -15,9 +15,48 @@ This `README.md` file serves as an example how a this will look like in a standa
 - Method(s) to solve the problem
 - What are the results?
 
-## Related Work (or Background)
-- Prerequisite reading if the audience needs knowledge before exploring the project.
-- Optional
+## Background
+
+### EMA (Exponential Moving Average)
+The Exponential Moving Average (EMA) is a weighted moving average that gives more weight to recent prices. It is calculated as:
+
+\[
+EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})
+\]
+
+Where:
+- \( EMA_t \) is the EMA at time \( t \),
+- \( EMA_{t-1} \) is the previous EMA value,
+- \( P_t \) is the current price at time \( t \),
+- \( \alpha \) is the smoothing factor, defined as \( \alpha = \frac{2}{N+1} \),
+- \( N \) is the number of periods.
+
+
+### RSI (Relative Strength Index)
+RSI measures momentum by comparing recent gains to recent losses, with values between 0 and 100. It is calculated as:
+
+\[
+RSI = 100 - \left( \frac{100}{1 + RS} \right)
+\]
+
+Where:
+- \(RS\) is the average gain of up periods divided by the average loss of down periods.
+
+### ATR (Average True Range)
+The Average True Range (ATR) measures market volatility. The formula is:
+
+\[
+ATR = \frac{1}{N} \sum_{i=1}^{N} \text{True Range}_i
+\]
+
+Where:
+- \(N\) is the number of periods,
+- \(\text{True Range}_i\) is the maximum of:
+  - Current high - current low,
+  - Absolute value of current high - previous close,
+  - Absolute value of current low - previous close.
+
+
 
 ## Trading (Algorithm) Hypotheses
 
@@ -73,7 +112,6 @@ There are two main components to the hypothesis: Criteria for opening a position
 - Data type: VN30F1M
 - Data period: 2023- present
 - Both input and output data will be stored in a specified data path. The default data path is **data folder** in the **src** directory of the project. You can change the data path by changing the DATA_PATH variable in the .env file.
-- How to store the output data?
 ### Data collection
 - The data is collected from Algotrade internship database
 ### Data Processing
@@ -87,18 +125,16 @@ For example:
 **src/data/2023-01-01_to_2023-12-31_by_5T.csv**
 ```
 The CSV file will include the following columns:
-```
-,Date,Time,tickersymbol,Open,Close,High,Low,Volume
-1,2023-01-03,09:00:00,VN30F2301,1000.7,1002.0,1002.6,1000.7,186
-```
+- ``Date``: The date of the interval
+- ``Time``: The time of the interval in format (YY-MM-DD)
+- ``tickersymbol``: That month ticketsymbol
+- ``Open``: Opening price
+- ``Close``: Closing price
+- ``High``: Highest price during the interval
+- ``Low``: Lowest price during the interval
+- ``Volume``: Trading volume
 
 ## Implementation
-- Briefly describe the implemetation.
-    - How to set up the enviroment to run the source code and required steps to replicate the results
-    - Discuss the concrete implementation if there are any essential details
-    - How to run each step from `In-sample Backtesting`, Step 4 to `Out-of-sample Backtesting`, Step 6 (or `Paper Trading`, Step 7).
-    - How to change the algorithm configurations for different run.
-- Most important section and need the most details to correctly replicate the results.
 ### Environment Setup
 1. Set up Python Virtual Environment
 ```
@@ -137,10 +173,14 @@ This command runs the `src/preprocess.py` script to extract and preprocess marke
 ```
 python3 src/preprocess.py --start_date 2023-01-01 --end_date 2023-12-31 --interval 5T
 ```
-This example processes data from January 1, 2023, to December 31, 2023, and resamples it into 5-minute intervals. The process may take approximately 2�V3 minutes to complete.
+This example processes data from January 1, 2023, to December 31, 2023, and resamples it into 5-minute intervals. The process may take approximately 2-3 minutes to complete.
 
 The resulting file will be saved in the `<DATA_PATH>` directory (default `src/data/`) under the name: `<start_date>_to_<end_date>_by_<tick_interval>.csv`
-
+The CSV file will include the following columns:
+```
+,Date,Time,tickersymbol,Open,Close,High,Low,Volume
+1,2023-01-03,09:00:00,VN30F2301,1000.7,1002.0,1002.6,1000.7,186
+```
 
 ## In-sample Backtesting
 In the `src/parameters.csv` file, key hyperparameters for our hypothesis are set to default values for in-sample backtesting. These include settings for indicators such as EMA, RSI, ATR, and volume thresholds, as well as risk management parameters like stop-loss and take-profit levels.
