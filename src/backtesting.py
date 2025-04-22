@@ -7,7 +7,7 @@ from utils import (
     close_position_type, holding_future_contract_expired, 
     calculate_pnl_after_fee, check_margin_ratio
 )
-from evaluation import maximumDrawdown,plot_all_portfolio_results,sharpe_ratio
+from evaluation import maximumDrawdown,plot_all_portfolio_results,sharpe_ratio, plot_backtesting_results
 import argparse
 from tqdm import tqdm
 
@@ -176,6 +176,7 @@ if __name__ == "__main__":
         plot_path=plot_path,
         params_path=params_path
     )   
+
     print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {plot_path}.")
 
 # python backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result 

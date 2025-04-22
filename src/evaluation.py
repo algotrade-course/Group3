@@ -58,7 +58,7 @@ def plot_backtesting_results(portfolio_values, output_file):
         return
 
     mdd, drawdown = maximumDrawdown(portfolio_series)
-    sharpe = sharpe_ratio(portfolio_series, rf_rate=0.03)
+    sharpe = sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=len(portfolio_series))
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax1.plot(dates, portfolio_series, label="Portfolio Value", color="blue", linewidth=2)
@@ -83,6 +83,7 @@ def plot_backtesting_results(portfolio_values, output_file):
     plt.savefig(output_file, dpi=300)
     print(f"Saved plot to {output_file}")
     plt.tight_layout()
+
     # plt.show()
 
 
