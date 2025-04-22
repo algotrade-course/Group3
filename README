@@ -94,28 +94,19 @@ The CSV file will include the following columns:
 ```
 
 ## In-sample Backtesting
-In the `src/.env` file, key hyperparameters for our hypothesis are set to default values for in-sample backtesting. These include settings for indicators such as EMA, RSI, ATR, and volume thresholds, as well as risk management parameters like stop-loss and take-profit levels.
+In the `src/parameters.csv` file, key hyperparameters for our hypothesis are set to default values for in-sample backtesting. These include settings for indicators such as EMA, RSI, ATR, and volume thresholds, as well as risk management parameters like stop-loss and take-profit levels.
 
 ```
-# parameters
-EMA_FAST=10
-EMA_SLOW=30
-RSI_PERIOD=14
-ATR_PERIOD=14
-VOL_WINDOW=10
-VOL_THRES=1.2
-RSI_UPPER=55
-RSI_LOWER=45
-MAX_LOSS=3.0
-MIN_PROFIT=0.5
-ATR_MULT=1.5
-RSI_EXIT=50
+EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold
+10,30,14,45,55,14,3.0,0.5,1.5,1.2,10,50
+
 ```
 For this project, we use data from the period 2023-01-01 to 2023-12-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 - `--dataset`: specify the dataset file to be used
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
+- `--parameters`: specify the directory for parameters.
 ```
-# python backtesting.py --dataset 2023-01-01_to_2023-01-01_by_5T.csv --result_dir result 
+python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters.csv
 ```
 ### In-sample Backtesting Result
 - Brieftly shown the result: table, image, etc.
@@ -132,10 +123,22 @@ For this project, we use data from the period 2023-01-01 to 2023-12-01 with a 5T
 - Has link to the Optimization Report
 
 ## Out-of-sample Backtesting
-- Describe the Out-of-sample Backtesting step
-    - Parameter
-    - Data
-- Step 6 of th Nine-Step
+After optimization, we identified the top 5 parameter sets with the highest Sharpe ratios. The results are saved in `/OPTIMIZATION_RANDOM/parameters.csv`, and the top 5 are listed below.
+```
+SampleIndex,EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold,Sharpe,mdd,net_profit
+271,10,25,18,25,70,14,2.5,1,1,1.2,20,45,2.782016973,-0.07720320466,29702000
+1634,8,40,14,35,70,21,5,1,1,0.8,10,45,2.717278496,-0.07548636353,41320000
+974,5,20,18,35,70,14,4.5,1,1,0.8,15,50,2.674389187,-0.06388517122,36240000
+2500,15,25,18,25,70,14,1.5,1,1,0.8,20,50,2.594883786,-0.07613530181,29810000
+2358,10,30,18,25,70,21,2,0.5,1,0.8,15,55,2.573981968,-0.07130522918,30525000
+```
+For out-of-sample backtesting, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
+
+
+```
+python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters.csv
+```
+
 ### Out-of-sample Backtesting Reuslt
 - Brieftly shown the result: table, image, etc.
 - Has link to the Out-of-sample Backtesting Report
