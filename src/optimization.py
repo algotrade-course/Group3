@@ -3,12 +3,10 @@ import numpy as np
 import pandas as pd
 import json
 import argparse
-import random
 
 # from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import matplotlib.pyplot as plt
-
 
 from itertools import product
 from dotenv import load_dotenv
@@ -23,8 +21,8 @@ load_dotenv()
 
 '''
     Usage:
-    Calling optimization: python3 optimization.py -d <PATH_TO_INSAMPLE_DATASET> -o <PATH_TO_SAVE_THE_RESULT>
-    Calling visualization (after optimization sucessfully): python3 run_optoptimizationimize.py -v <PATH_TO_SUMMARY_FILE (CREATED BY OPTIMIZATION PROCESS)>
+    Calling optimization: python3 src/optimization.py -d src/data/2023-01-01_to_2023-12-31_by_5T.csv -p src/optimization.json -m 2500 -o src/OPTIMIZATION_RANDOM
+    Calling visualization (after optimization sucessfully): python3 src/optimization.py -v <PATH_TO_SUMMARY_FILE (CREATED BY OPTIMIZATION PROCESS)>
 '''
 
 SEED = 42
@@ -72,23 +70,14 @@ def visualization(data_path):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-    
-import os
-import json
-import pandas as pd
-import random
-from itertools import product
-from backtesting import backtesting  # your existing import
 
-MAX_MODELS = 3000
-
-def optimize_strategy(data, result_dir="OPTIMIZATION"):
+def optimize_strategy(data, optimization_json="optimization.json", result_dir="OPTIMIZATION", max_models=2500):
     os.makedirs(result_dir, exist_ok=True)
     summary_path = os.path.join(result_dir, 'summary.csv')
     ensure_summary_file(summary_path)
 
     # load parameter space
-    with open("optimization.json", "r") as f:
+    with open(optimization_json, "r") as f:
         pc = json.load(f)
 
     param_lists = [
@@ -111,7 +100,7 @@ def optimize_strategy(data, result_dir="OPTIMIZATION"):
     perm = rng.permutation(len(all_combos))
 
     # limit to MAX_MODELS
-    combos_to_run = [all_combos[i] for i in perm[:MAX_MODELS]]
+    combos_to_run = [all_combos[i] for i in perm[:max_models]]
 
     results = []
     total = len(combos_to_run)
@@ -187,6 +176,16 @@ def main():
         metavar="SUMMARY_CSV",
         help="Path to summary.csv to plot your results"
     )
+    
+    parser.add_argument(
+        "-p", "--parameter",
+        help="Path to the JSON file containing the possible values for each parameter to be optimized."
+    )
+    parser.add_argument(
+        "-m", "--maximum-model",
+        type=int,
+        help="Number of models randomly selected from the list of parameter combinations."
+    )
     parser.add_argument(
         "-o", "--result-dir",
         default="OPTIMIZATION",
@@ -199,7 +198,7 @@ def main():
         visualization(args.visualize)
     else:
         data = pd.read_csv(args.data, parse_dates=True)
-        df = optimize_strategy(data, result_dir=args.result_dir)
+        df = optimize_strategy(data, optimization_json=args.parameter, result_dir=args.result_dir, max_models=args.maximum_model)
         print(df.head())
 
 

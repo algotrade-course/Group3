@@ -181,7 +181,7 @@ This command runs the `src/preprocess.py` script to extract and preprocess marke
 
 - `--interval`: The time interval for resampling the data using pandas (default: 5T, which means 5-minute intervals).
 ```
-python3 src/preprocess.py --start_date 2023-01-01 --end_date 2023-12-31 --interval 5T
+python src/preprocess.py --start_date 2023-01-01 --end_date 2023-12-31 --interval 5T
 ```
 This example processes data from January 1, 2023, to December 31, 2023, and resamples it into 5-minute intervals. The process may take approximately 2-3 minutes to complete.
 
@@ -244,15 +244,17 @@ In total, twelve parameters were considered in the optimization process: ema_sho
 
 To run optimization, run the following command:
 - `-d`: Specify the dataset file to be used
+- `-p`: Path to the JSON file containing the possible values for each parameter to be optimized.
+- `-n`: Number of models randomly selected from the list of parameter combinations.
 - `-o`: Location to save the optimization results
 ```
-python3 src/optimization.py -d src/data/2023-01-01_to_2023-12-31_by_5T.csv -o src/OPTIMIZATION_RANDOM
+python src/optimization.py -d src/data/2023-01-01_to_2023-12-31_by_5T.csv -p src/optimization.json -m 2500 -o src/OPTIMIZATION_RANDOM
 ```
 
 To draw the graphs to illustrate the results of optimization process, run the following script:
 - `-v`: Path to summary.csv file created by the optimization process.
 ```
-python3 src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
+python src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
 ```
 
 ### Optimization Result
@@ -291,8 +293,8 @@ After running the command below, we obtained the Sharpe Ratio and Maximum Drawdo
 | 271    | 0.5741       | -11.77%                 |
 | 1634    | -0.0494      | -25.98%                 |
 | 974    | 0.3945       | -17.39%                 |
-| 2500    | 1.6497       | -8.00%                  |
-| 2358   | **1.4416**       | -9.66%                  |
+| 2500    | **1.6497**       | **-8.00%**                  |
+| 2358   | 1.4416       | -9.66%                  |
 
 ![Diagram](/figures/all_backtests_out_sample.png)
 
