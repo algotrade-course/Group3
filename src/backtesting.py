@@ -127,11 +127,12 @@ def backtesting(data, ema_periods, rsi_period, atr_period,
     return portfolio_df, trade_log_df, sharpeRatio, mdd
 
 
-def run_backtests(data_path: str,  result_dir: str, plot_path: str, params_path: str):
+def run_backtests(data_path: str,  result_dir: str, params_path: str):
     data = pd.read_csv(data_path)
 
     strategy_params = pd.read_csv(params_path)
     for _, row in strategy_params.iterrows():
+        sample_index = int(row['SampleIndex'])
         ema_periods = (float(row['EMA_Short']), float(row['EMA_Long']))
         rsi_period = int(row['RSI_Period'])
         rsi_lower_threshold = float(row['RSI_lower'])
@@ -143,19 +144,22 @@ def run_backtests(data_path: str,  result_dir: str, plot_path: str, params_path:
         vol_window = int(row['Volume_window'])
         vol_thres = float(row['Volume_Threshold'])
         rsi_exit_threshold_range = float(row['RSI_exit_threshold'])
-        print(f"Running backtest for EMA {ema_periods}, RSI {rsi_period}")
+        print(f"Running backtest for Model {sample_index}")
         portfolio_df, trades_df, sharpe_ratio, mdd = backtesting(data=data, ema_periods=ema_periods, rsi_period=rsi_period, 
                                                                  atr_period=atr_period, vol_window=vol_window, vol_thres=vol_thres, 
                                                                  rsi_upper_threshold=rsi_upper_threshold, rsi_lower_threshold=rsi_lower_threshold,
                                                                  max_loss=max_loss, min_profit=min_profit, atr_multiplier=atr_multiplier,
                                                                  rsi_exit_threshold_range=rsi_exit_threshold_range)
-        suffix = f"{ema_periods[0]}_{ema_periods[1]}_{rsi_period}"
+        suffix = f"{sample_index}"
         trades_df.to_csv(os.path.join(result_dir, f"trade_log_{suffix}.csv"), index=False)
         portfolio_df.to_csv(os.path.join(result_dir, f"portfolio_values_{suffix}.csv"), index=False)
         print(f'SHARPE RATIO: {sharpe_ratio:.4f}')
         print(f'MDD: {mdd:.2%}')
-    plot_all_portfolio_results(result_dir=result_dir, output_file=plot_path)
-    plot_backtesting_results(result_dir, plot_path)
+    plot_all_portfolio_results(result_dir=result_dir, output_file=os.path.join(result_dir, "all_backtests.png"))
+    # for path in os.listdir(result_dir):
+    #     if path.startswith('portfolio_values'):
+    #         index = os.path.splitext(path)[-2]
+    #         plot_backtesting_results(os.path.join(result_dir, path), os.path.join(result_dir, f"backtests_{index}.csv.png"), index=index)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run backtests")
@@ -165,16 +169,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     data_path = os.path.join(data_path_env, args.dataset)
 
-    
-    plot_path = os.path.join(args.result_dir, "all_backtests.png")
-
     os.makedirs(args.result_dir, exist_ok=True)
     params_path = args.parameters
     data = pd.read_csv(params_path)
     run_backtests(
         data_path=data_path,
         result_dir=args.result_dir,
-        plot_path=plot_path,
         params_path=params_path
     )   
-    print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {plot_path}.")
+    print(f"Backtesting completed. Results saved to {args.result_dir} and plot saved to {args.result_dir}.")

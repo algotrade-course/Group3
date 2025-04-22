@@ -45,7 +45,7 @@ def sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=252):
 
     return mean_excess / std_excess * np.sqrt(periods_per_year)
 
-def plot_backtesting_results(input_csv, output_file="result/backtests.png"):
+def plot_backtesting_results(input_csv, output_file="result/backtests.png", index=0):
     # Read the CSV
     df = pd.read_csv(input_csv)
 
@@ -54,13 +54,15 @@ def plot_backtesting_results(input_csv, output_file="result/backtests.png"):
         return
 
     # Extract data
-    dates = pd.to_datetime(df["Date"])
+    
     portfolio_series = df["Portfolio Value"]
 
     # Calculate metrics
     mdd, drawdown = maximumDrawdown(portfolio_series)
     sharpe = sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=len(portfolio_series))
 
+
+    dates = pd.to_datetime(df["Date"])
     # Plotting
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax1.plot(dates, portfolio_series, label="Portfolio Value", color="blue", linewidth=2)
@@ -85,11 +87,13 @@ def plot_backtesting_results(input_csv, output_file="result/backtests.png"):
 
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    base_name = os.path.splitext(output_file)[0]  # removes the .csv extension
+    output = f"{base_name}.png"
 
     # Add suffix "_mdd_sharpe" before saving
-    output_file = output_file.replace(".png", "_mdd_sharpe.png")
-    plt.savefig(output_file, dpi=300)
+    plt.savefig(output, dpi=300)
     print(f"Saved plot to {output_file}")
+    plt.show()
 
 
 def plot_all_portfolio_results(result_dir="result", output_file="result/all_backtests.png"):
@@ -108,14 +112,19 @@ def plot_all_portfolio_results(result_dir="result", output_file="result/all_back
                 print(f"Skipping {file}: missing required columns.")
                 continue
 
+            portfolio_series = df["Portfolio Value"]
             df["Date"] = pd.to_datetime(df["Date"])
-            label = file.replace("portfolio_values_", "").replace(".csv", "")
+            
+            mdd, drawdown = maximumDrawdown(portfolio_series)
+            sharpe = sharpe_ratio(portfolio_series, rf_rate=0.03, periods_per_year=len(portfolio_series))
+
+            label = f'Model: {file.replace("portfolio_values_", "").replace(".csv", "")}, SHARPE: {sharpe:.4f}, MDD: {mdd:.2%}'
             plt.plot(df["Date"], df["Portfolio Value"], label=label)
         except Exception as e:
             print(f"Error reading {file}: {e}")
             continue
 
-    plt.title("Backtesting Results - All Configurations")
+    plt.title("Backtesting Result")
     plt.xlabel("Date")
     plt.ylabel("Portfolio Value")
     plt.grid(True, linestyle="--", alpha=0.5)
@@ -145,10 +154,9 @@ if __name__ == "__main__":
         df = pd.read_csv(args.input_csv)
         if "Date" not in df.columns or "Portfolio Value" not in df.columns:
             raise ValueError("CSV must contain 'Date' and 'Portfolio Value' columns.")
-        portfolio_values = df[["Date", "Portfolio Value"]].to_dict("records")
     except Exception as e:
         print(f"Error loading CSV file: {e}")
         exit(1)
 
-    plot_backtesting_results(portfolio_values, args.output_file)
+    plot_backtesting_results(args.input_csv, args.output_file)
     print("Plotting complete.")

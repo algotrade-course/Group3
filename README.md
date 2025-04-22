@@ -87,7 +87,7 @@ Generally, the decision-making process of the algorithm is driven by the followi
 | `VOLUME_WINDOW`      | Number of bars used to compute rolling average volume.                      |
 | `RSI_EXIT_THRESHOLD` | RSI value used to help decide when to exit an active trade.                 |
 
-**There are two main components to the hypothesis: Criteria for opening a position and Criteria for closing a position.**
+There are two main components to the hypothesis: Criteria for opening a position and Criteria for closing a position.
 
 ### Opening a Position
 - **No position is opened if either:**
@@ -204,9 +204,7 @@ For backtesting, we use data from the period 2023-01-01 to 2023-12-01 with a 5T 
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
 - `--parameters`: specify the directory for parameters.
 ```
-python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters_in_sample.csv
-python src/evaluation.py --input_csv result_in_sample/portfolio_values_10.0_30.0_14.csv --output_file result_in_sample/plot_10_30_14.png 
-
+python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir src/result_in_sample --parameters src/parameters_in_sample.csv
 ```
 ### In-sample Backtesting Result
 After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
@@ -283,7 +281,7 @@ After optimization, we identified the top 5 parameter sets with the highest Shar
 For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 
 ```
-python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters_out_sample.csv
+python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir src/result_out_sample --parameters src/parameters_out_sample.csv
 ```
 
 After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:

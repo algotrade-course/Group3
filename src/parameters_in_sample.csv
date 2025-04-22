@@ -1,2 +1,2 @@
-EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold
-10,30,14,45,55,14,3.0,0.5,1.5,1.2,10,50
+SampleIndex,EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold
+0,10,30,14,45,55,14,3.0,0.5,1.5,1.2,10,50
