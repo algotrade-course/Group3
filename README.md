@@ -12,7 +12,7 @@ However, individual investors often tend to be influenced by various factors suc
 
 In this project, we propose an algorithm to automate the trading process in Vietnam derivative market. The algorithm are made of from the idea of technical indicator rules, with a combinations of Exponential Moving Averages (EMA), Relative Strength Index (RSI), and ATR (Average True Range), and Volume of the market. The OLHC is collected as candle of 5-minutes of VN30F1M. Generally, we open a position if a clear trend is identified (LONG or SHORT) and it is confirmed by a sufficiently high volume, indicating strong market participation and increasing the likelihood that the trend is genuine and sustainable rather than a temporary fluctuation. Otherwise, close position acted if the loss is larger than maximum loss boundering, ending of the trend, or trailing signal. 
 
-We tested our hypothesis in two phases: an in-sample test using VN30F1M data from January 3, 2023 to December 21, 2023, and an out-of-sample test using data from January 2, 2024 to December 19, 2024, with an optimization process conducted in between. In the in-sample test, the strategy achieved a Sharpe ratio of 1.0846, a maximum drawdown (MDD) of -16.49%, and a net profit of 14,332,000 VND, indicating that the hypothesis holds promise for further optimization. For the optimization process, we first defined a list of possible parameter values and then performed random sampling from the full set of parameter combinations, testing each configuration on the 2023 dataset. We selected the top five parameter sets with the highest Sharpe ratios for further evaluation in the out-of-sample test. The final model was chosen as the one among the top five that yielded the highest Sharpe ratio on the 2024 out-of-sample data. As a result, the selected model achieved a Sharpe ratio of 2.5949 on the in-sample data and 1.6497 on the out-of-sample data.
+We tested our hypothesis in two phases: an in-sample test using VN30F1M data from January 3, 2023 to December 21, 2023, and an out-of-sample test using data from January 2, 2024 to December 19, 2024, with an optimization process conducted in between. The initial capital was set at 40,000,000 VND, and the strategy was restricted to holding only one contract at a time. In the in-sample test, the strategy achieved a Sharpe ratio of 1.0846, a maximum drawdown (MDD) of -16.49%, and a net profit of 14,332,000 VND, indicating that the hypothesis holds promise for further optimization. For the optimization process, we first defined a list of possible parameter values and then performed random sampling from the full set of parameter combinations, testing each configuration on the 2023 dataset. We selected the top five parameter sets with the highest Sharpe ratios for further evaluation in the out-of-sample test. The final model was chosen as the one among the top five that yielded the highest Sharpe ratio on the 2024 out-of-sample data. As a result, the selected model achieved a Sharpe ratio of 2.5949 on the in-sample data and 1.6497 on the out-of-sample data.
 
 The remainder of this template is dedicated to describing our implementation process, organized into several key sections. The Background section introduces and explains the main technical indicators used in the algorithm. The Trading Hypotheses section details the proposed algorithm, including how these indicators are combined to determine entry and exit signals.
 The Data section outlines the data collection process and how the data is utilized in model development and testing. The Implementation section describes the setup and environment used to run the experiments. The In-sample Testing section explains how the initial evaluation was conducted using a default set of parameters. The Optimization section illustrates the process of testing a wide range of parameter combinations and presents the results. The Out-of-sample Testing section evaluates the top-performing parameter sets selected from the optimization phase on unseen data. The Paper Trading section provides a tutorial on deploying the algorithm in a real-time trading simulation. Finally, the Conclusion summarizes our work and key findings.
@@ -76,10 +76,10 @@ Generally, the decision-making process of the algorithm is driven by the followi
 |----------------------|-----------------------------------------------------------------------------|
 | `EMA_SHORT`          | Period for calculating the short-term Exponential Moving Average (EMA).     |
 | `EMA_LONG`           | Period for calculating the long-term Exponential Moving Average (EMA).      |
-| `RSI_PERIOD`         | Lookback period used to compute the Relative Strength Index (RSI).          |
+| `RSI_PERIOD`         | Period for calculating the Relative Strength Index (RSI).                   |
 | `RSI_LOWER_THRESHOLD`| RSI value below which a long position may be considered (oversold zone).    |
 | `RSI_UPPER_THRESHOLD`| RSI value above which a short position may be considered (overbought zone). |
-| `ATR_PERIOD`         | Lookback period used to calculate the Average True Range (ATR).             |
+| `ATR_PERIOD`         | Period for calculating the Average True Range (ATR).                        |
 | `ATR_MULTIPLIER`     | Factor used to scale the ATR for setting trailing stop-loss levels.         |
 | `MIN_PROFIT`         | Minimum required profit to trigger a profit-taking condition.               |
 | `MAX_LOSS`           | Maximum allowed loss before triggering a stop-loss.                         |
@@ -255,14 +255,18 @@ To draw the graphs to illustrate the results of optimization process, run the fo
 python3 src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
 ```
 
-The performance of each model was evaluated primarily using the Sharpe Ratio, followed by Maximum Drawdown (MDD). We first filtered out any model with a Sharpe Ratio below 0.7 or an MDD lower than -30. After this filtering step, we sorted the remaining models by their Sharpe Ratio and selected the top five with the highest values.
-
 ### Optimization Result
-The optimization process took approximately 4.5 hours in total, during which 2,500 parameter combinations were evaluated.
+The optimization process took approximately 4.5 hours in total, during which 2,500 parameter combinations were evaluated. The following graphs illustrate the results of the optimization process using VN30F1M data from January 2, 2024, to December 19, 2024.
 
 The figure below illustrates the relationship between the Sharpe Ratio and MDD for the 2,500 parameter combinations considered. The highest Sharpe Ratio observed was 2.782, while the lowest was -0.4861. In contrast, the MDD ranged from a maximum of -0.0556 to a minimum of -0.3143.
 
 ![Diagram](/figures/SharpeVSMDD.png)
+
+The following figure illustrates the distribution of net profits across all tested configurations. The majority of the profits fell within the range of 10,000,000 VND to 20,000,000 VND, indicating a consistent level of profitability among many parameter sets.
+![Diagram](/figures/NET.png)
+
+The figure below shows the relationship between the Sharpe ratio and the net profit of the tested configurations. The results suggest a linear correlation, indicating that higher Sharpe ratios tend to be associated with greater net profits.
+![Diagram](/figures/RelationSharpeAndNet.png)
 
 ## Out-of-sample Backtesting
 After optimization, we identified the top 5 parameter sets with the highest Sharpe ratios. The results are saved in `/OPTIMIZATION_RANDOM/parameters.csv`, and the top 5 are listed below.
