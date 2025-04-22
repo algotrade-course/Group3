@@ -20,8 +20,53 @@ This `README.md` file serves as an example how a this will look like in a standa
 - Optional
 
 ## Trading (Algorithm) Hypotheses
-- Describe the Trading Hypotheses
-- Step 1 of the Nine-Step
+
+Generally, the decision-making process of the algorithm is driven by the following parameters:
+
+| Parameter            | Description                                                                 |
+|----------------------|-----------------------------------------------------------------------------|
+| `EMA_SHORT`          | Period for calculating the short-term Exponential Moving Average (EMA).     |
+| `EMA_LONG`           | Period for calculating the long-term Exponential Moving Average (EMA).      |
+| `RSI_PERIOD`         | Lookback period used to compute the Relative Strength Index (RSI).          |
+| `RSI_LOWER_THRESHOLD`| RSI value below which a long position may be considered (oversold zone).    |
+| `RSI_UPPER_THRESHOLD`| RSI value above which a short position may be considered (overbought zone). |
+| `ATR_PERIOD`         | Lookback period used to calculate the Average True Range (ATR).             |
+| `ATR_MULTIPLIER`     | Factor used to scale the ATR for setting trailing stop-loss levels.         |
+| `MIN_PROFIT`         | Minimum required profit to trigger a profit-taking condition.               |
+| `MAX_LOSS`           | Maximum allowed loss before triggering a stop-loss.                         |
+| `VOLUME_THRESHOLD`   | Multiplier applied to average volume to detect significant volume spikes.   |
+| `VOLUME_WINDOW`      | Number of bars used to compute rolling average volume.                      |
+| `RSI_EXIT_THRESHOLD` | RSI value used to help decide when to exit an active trade.                 |
+
+There are two main components to the hypothesis: Criteria for opening a position and Criteria for closing a position.
+
+### Opening a Position
+- No position is opened if either:
+    - There is insufficient historical data (e.g., not enough bars to calculate RSI or EMA), or
+    - None of the entry conditions are satisfied.
+- Open a `LONG` position when all of the following conditions are met: 
+    - EMA_SHORT is greater than EMA_LONG (indicating an uptrend),
+    - CURRENT_PRICE is above EMA_SHORT,
+    - RSI exceeds the RSI_UPPER_THRESHOLD,
+    - CURRENT_VOLUME is greater than VOLUME_THRESHOLD $\times$ AVERAGE_VOLUME (indicating strong market interest).
+- Open a `SHORT` position when all of the following conditions are met:
+    - EMA_SHORT is less than EMA_LONG (indicating a downtrend).
+    - CURRENT_PRICE is below EMA_SHORT.
+    - RSI falls below the RSI_LOWER_THRESHOLD.
+    - CURRENT_VOLUME is greater than VOLUME_THRESHOLD $\times$ AVERAGE_VOLUME.
+
+### Close position:
+
+- No position is closed if none of the exit conditions are triggered.
+- Close a `LONG` position when any of the following conditions apply
+    - The current loss exceeds the MAX_LOSS threshold.
+    - CURRENT_PRICE drops below EMA_LONG.
+    - RSI falls below the RSI_EXIT_THRESHOLD,
+    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE < max(ENTRY_PRICE + MIN_PROFIT,PREVIOUS_CLOSE - ATR × ATR_MULTIPLIER).
+- Close `SHORT` position if:
+    - The current loss exceeds the MAX_LOSS threshold.
+    - CURRENT_PRICE rises above EMA_LONG,
+    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE > min(ENTRY_PRICE - MIN_PROFIT, PREVIOUS_CLOSE + ATR × ATR_MULTIPLIER)
 
 ## Data
 - Data source: Algotrade internship database
@@ -120,6 +165,30 @@ MDD: -16.49%
 ![Diagram](/figures/all_backtests_in_sample.png)
 
 ## Optimization
+
+To find out an well performing parameters set for the hypothesis, we performed Random sampling strategy. We first used itertools.product method from Python's standard library to conduct all possible combinations of predefiend set of parameters. Then, we used numpy to randomly take out subset of the all combinations list to test the configuration that yields the best performance based on Sharpe Ratio and Maximum Drawdown (MDD) by running backtesting on each combination in the randomly sampled dataset. Finally, the visualization conducted to analyze the result by using Matplotlib of Python.
+
+There are 12 parameters have been taken into consideration, including: ema_short, ema_long, rsi_range, rsi_lower_threshold, rsi_upper_threshold, atr_period, max_loss, min_profit, atr_multiplier, volume_threshold, volume_window, rsi_exit_threshold. The list of possible values for each parameter are defined in optimization.json file, with the default was:
+
+```json
+{
+  "ema_short_range": [5, 8, 10, 12, 15],
+  "ema_long_range": [20, 25, 30, 35, 40],
+  "rsi_range": [10, 14, 18],
+  "rsi_lower_threshold_range": [25, 30, 35, 40, 45],
+  "rsi_upper_threshold_range": [50, 55, 60, 65, 70],
+  "atr_period_range": [10, 14, 21],
+  "max_loss_range": [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
+  "min_profit_range": [0.5, 1.0, 1.5, 2.0],
+  "atr_mult_range": [1.0, 1.5, 2.0],
+  "vol_thresh_range": [0.8, 1.0, 1.2, 1.4],
+  "volume_window_range": [5, 10, 15, 20],
+  "rsi_exit_threshold_range": [45, 50, 55]
+}
+```
+
+The performance of model was assessed based on Sharpe ratio, then MDD. That is, we first sort the result by sharpe ratio, then take out 5 model have highest sharpe. 
+
 - Describe the Optimization step
     - Optimization process/methods/library
     - Parameters to optimize
