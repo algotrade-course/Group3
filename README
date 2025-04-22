@@ -99,7 +99,6 @@ In the `src/parameters.csv` file, key hyperparameters for our hypothesis are set
 ```
 EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold
 10,30,14,45,55,14,3.0,0.5,1.5,1.2,10,50
-
 ```
 For this project, we use data from the period 2023-01-01 to 2023-12-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 - `--dataset`: specify the dataset file to be used
@@ -109,8 +108,12 @@ For this project, we use data from the period 2023-01-01 to 2023-12-01 with a 5T
 python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters.csv
 ```
 ### In-sample Backtesting Result
-- Brieftly shown the result: table, image, etc.
-- Has link to the In-sample Backtesting Report
+After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
+```
+SHARPE RATIO: 1.0846
+MDD: -16.49%
+```
+![Diagram](/figures/all_backtests_in_sample.png)
 
 ## Optimization
 - Describe the Optimization step
@@ -134,15 +137,22 @@ SampleIndex,EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Los
 ```
 For out-of-sample backtesting, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 
-
 ```
 python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters.csv
 ```
 
 ### Out-of-sample Backtesting Reuslt
-- Brieftly shown the result: table, image, etc.
-- Has link to the Out-of-sample Backtesting Report
+After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
 
+| Sample Index | Sharpe Ratio | Maximum Drawdown (MDD) |
+|------------|--------------|-------------------------|
+| 271    | 0.5741       | -11.77%                 |
+| 1634    | -0.0494      | -25.98%                 |
+| 974    | 0.3945       | -17.39%                 |
+| 2500    | 1.6497       | -8.00%                  |
+| 2358   | 1.4416       | -9.66%                  |
+
+![Diagram](/figures/all_backtests_out_sample.png)
 ## Paper Trading
 - Describe the Paper Trading step
 - Step 7 of the Nine-Step
