@@ -5,15 +5,22 @@
 ## Abstract
 This study introduces a rule-based trading strategy for VN30F1M, using technical indicators to define precise entry and exit points for long and short positions. Long entries rely on short-term EMAs crossing above long-term EMAs, high RSI, and strong volume, while short entries occur under opposite conditions. Exits are governed by strict rules, including stop-loss limits, EMA cross reversals, RSI shifts, and an ATR-based trailing stop. The strategy aims to enhance trade consistency and risk management in a Vietnam derivatives market.
 ## Introduction
-- Briefly introduce the project.
-- Problem statement, research question or the hypothesis.
-- Method(s) to solve the problem
-- What are the results?
 
+The derivatives market in Vietnam officially launched on August 10, 2017, with the VN30 Index Futures as its first traded product. The market was introduced to offer investors additional tools for risk hedging, speculation, and portfolio management. During the period from 2018 to 2022, the VN30 Index Futures contract demonstrated strong performance, with an average annual increase of 38.65% [1]. This notable growth highlights the significant opportunities available in the market, especially for individual investors.
+
+However, individual investors often tend to be influenced by various factors such as emotions, human error, and slow decision-making and ordering, which can lead to missed opportunities or failure to execute orders at target prices since the investors are unable to monitor the market continuously [2]. These obstacles can be addressed through the use of algorithmic trading, which not only helps overcome the issues mentioned above but also saves time for investors by automating decision-making and order execution [2].
+
+In this project, we propose an algorithm to automate the trading process in Vietnam derivative market. The algorithm are made of from the idea of technical indicator rules, with a combinations of Exponential Moving Averages (EMA), Relative Strength Index (RSI), and ATR (Average True Range), and Volume of the market. The OLHC is collected as candle of 5-minutes of VN30F1M. Particularly, we open position if there is a particular trend occurred (`LONG` or `SHORT`) and verified by a signal of volume is high enough so that . Otherwise, close position acted if the loss is larger than maximum loss boundering, ending of the trend, or trailing signal.
+
+We tested our hypothesis in two phases: an in-sample test using VN30F1M data from January 3, 2023 to December 21, 2023, and an out-of-sample test using data from January 2, 2024 to December 19, 2024, with an optimization process conducted in between. In the in-sample test, the strategy achieved a Sharpe ratio of 1.0846, a maximum drawdown (MDD) of -16.49%, and a net profit of 14,332,000 VND, indicating that the hypothesis holds promise for further optimization. For the optimization process, we first defined a list of possible parameter values and then performed random sampling from the full set of parameter combinations, testing each configuration on the 2023 dataset. We selected the top five parameter sets with the highest Sharpe ratios for further evaluation in the out-of-sample test. The final model was chosen as the one among the top five that yielded the highest Sharpe ratio on the 2024 out-of-sample data. As a result, the selected model achieved a Sharpe ratio of 2.5949 on the in-sample data and 1.6497 on the out-of-sample data.
+
+
+The remainder of this template is dedicated to describing our implementation process, organized into several key sections. The Background section introduces and explains the main technical indicators used in the algorithm. The Trading Hypotheses section details the proposed algorithm, including how these indicators are combined to determine entry and exit signals.
+The Data section outlines the data collection process and how the data is utilized in model development and testing. The Implementation section describes the setup and environment used to run the experiments. The In-sample Testing section explains how the initial evaluation was conducted using a default set of parameters. The Optimization section illustrates the process of testing a wide range of parameter combinations and presents the results. The Out-of-sample Testing section evaluates the top-performing parameter sets selected from the optimization phase on unseen data. The Paper Trading section provides a tutorial on deploying the algorithm in a real-time trading simulation. Finally, the Conclusion summarizes our work and key findings.
 ## Background
 
 ### EMA (Exponential Moving Average)
-The Exponential Moving Average (EMA) is a weighted moving average that gives more weight to recent prices. It is calculated as:
+The Exponential Moving Average (EMA) is a weighted moving average that gives more weight to recent prices [3]. It is calculated as:
 
 \[
 EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})
@@ -311,6 +318,9 @@ The message received from Kafka is preprocessed to align with the format of the 
 This trading strategy utilizes a combination of trend and momentum indicators—specifically EMA, RSI, and volume—to identify high-probability entry points in the market. The project offers a basic view of the algorithmic trading workflow. However, the final results can vary significantly depending on the dataset, so no definitive conclusions can be drawn at this stage. In the future, we aim to further optimize the process to uncover more concrete evidence that supports our hypotheses.
 
 ## Reference
-- [Investopedia: Exponential Moving Average (EMA)](https://www.investopedia.com/terms/e/ema.asp)  
-- [AlgoTrade Hub: Thực tiễn giao dịch thuật toán tại thị trường chứng khoán Việt Nam](https://hub.algotrade.vn/knowledge-hub/thuc-tien-giao-dich-thuat-toan-tai-thi-truong-chung-khoan-viet-nam/)
+[1] Vietnam News Agency, “Six years of derivative stock market: VN30 index futures contract up 27.46% annually,” VietnamPlus, Aug. 14, 2023. [Online]. Available: https://en.vietnamplus.vn/six-years-of-derivative-stock-market-vn30-index-futures-contract-up-2746-annually-post266231.vnp. [Accessed: Apr. 23, 2025].​
+
+[2] Algotrade, “Thực tiễn giao dịch thuật toán tại thị trường chứng khoán Việt Nam,” Algotrade Knowledge Hub, [Online]. Available: https://hub.algotrade.vn/knowledge-hub/thuc-tien-giao-dich-thuat-toan-tai-thi-truong-chung-khoan-viet-nam/. [Accessed: Apr. 23, 2025].​
+
+[3] J. Chen, “Exponential Moving Average (EMA),” Investopedia, May 3, 2023. [Online]. Available: https://www.investopedia.com/terms/e/ema.asp. [Accessed: Apr. 23, 2025].
 
