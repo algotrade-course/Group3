@@ -21,38 +21,32 @@ The Data section outlines the data collection process and how the data is utiliz
 ### EMA (Exponential Moving Average)
 The Exponential Moving Average (EMA) is a weighted moving average that gives more weight to recent prices [3]. It is calculated as:
 
-\[
-EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})
-\]
+$EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})$
 
 Where:
-- \( EMA_t \) is the EMA at time \( t \),
-- \( EMA_{t-1} \) is the previous EMA value,
-- \( P_t \) is the current price at time \( t \),
-- \( \alpha \) is the smoothing factor, defined as \( \alpha = \frac{2}{N+1} \),
-- \( N \) is the number of periods.
+- $EMA_t$ is the EMA at time $$t$,
+- $EMA_{t-1}$ is the previous EMA value,
+- $P_t$ is the current price at time $t$,
+- $\alpha$ is the smoothing factor, defined as $\alpha$ = $\frac{2}{N+1}$,
+- $N$ is the number of periods.
 
 
 ### RSI (Relative Strength Index)
 RSI measures momentum by comparing recent gains to recent losses, with values between 0 and 100 [4]. It is calculated as:
 
-\[
-RSI = 100 - \left( \frac{100}{1 + RS} \right)
-\]
+$RSI = 100 - \left( \frac{100}{1 + RS} \right)$
 
 Where:
-- \(RS\) is the average gain of up periods divided by the average loss of down periods.
+- $RS$ is the average gain of up periods divided by the average loss of down periods.
 
 ### ATR (Average True Range)
 The Average True Range (ATR) measures market volatility [5]. The formula is:
 
-\[
-ATR = \frac{1}{N} \sum_{i=1}^{N} \text{True Range}_i
-\]
+$ATR = \frac{1}{N} \sum_{i=1}^{N} \text{True Range}_i$
 
 Where:
-- \(N\) is the number of periods,
-- \(\text{True Range}_i\) is the maximum of:
+- $N$ is the number of periods,
+- $\text{True Range}_i$ is the maximum of:
   - Current high - current low,
   - Absolute value of current high - previous close,
   - Absolute value of current low - previous close.
