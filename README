@@ -24,15 +24,28 @@ This `README.md` file serves as an example how a this will look like in a standa
 - Step 1 of the Nine-Step
 
 ## Data
-- Data source
-- Data type
-- Data period
-- How to get the input data?
+- Data source: Algotrade internship database
+- Data type: VN30F1M
+- Data period: 2023- present
+- Both input and output data will be stored in a specified data path. The default data path is **data folder** in the **src** directory of the project. You can change the data path by changing the DATA_PATH variable in the .env file.
 - How to store the output data?
 ### Data collection
-- Step 2 of the Nine-Step
+- The data is collected from Algotrade internship database
 ### Data Processing
-- Step 3 of the Nine-Step
+- The queried data is extracted and saved as CSV files, with the results stored in the <DATA_PATH> directory.
+
+- The data is then processed into tick data based on a preferred interval (more infomation in the [Implementation Data Collection and Preprocessing](#data-collection-and-preprocessing)). In this project, we focus on a 5-minute interval.
+
+The resulting file will be saved under the name: `<start_date>_to_<end_date>_by_<tick_interval>.csv`
+For example:
+```
+**src/data/2023-01-01_to_2023-12-31_by_5T.csv**
+```
+The CSV file will include the following columns:
+```
+,Date,Time,tickersymbol,Open,Close,High,Low,Volume
+1,2023-01-03,09:00:00,VN30F2301,1000.7,1002.0,1002.6,1000.7,186
+```
 
 ## Implementation
 - Briefly describe the implemetation.
@@ -79,28 +92,19 @@ This command runs the `src/preprocess.py` script to extract and preprocess marke
 ```
 python3 src/preprocess.py --start_date 2023-01-01 --end_date 2023-12-31 --interval 5T
 ```
-This example processes data from January 1, 2023, to December 31, 2023, and resamples it into 5-minute intervals. The process may take approximately 2¡V3 minutes to complete.
+This example processes data from January 1, 2023, to December 31, 2023, and resamples it into 5-minute intervals. The process may take approximately 2ï¿½V3 minutes to complete.
 
-The resulting file will be saved in the `<DATA_PATH>` directory (default `src/data/`) under the name: `start_date_to_end_date_by_interval.csv`
-For example:
-```
-src/data/2023-01-01_to_2023-12-31_by_5T.csv
-```
+The resulting file will be saved in the `<DATA_PATH>` directory (default `src/data/`) under the name: `<start_date>_to_<end_date>_by_<tick_interval>.csv`
 
-The CSV file will include the following columns:
-```
-,Date,Time,tickersymbol,Open,Close,High,Low,Volume
-1,2023-01-03,09:00:00,VN30F2301,1000.7,1002.0,1002.6,1000.7,186
-```
 
 ## In-sample Backtesting
 In the `src/parameters.csv` file, key hyperparameters for our hypothesis are set to default values for in-sample backtesting. These include settings for indicators such as EMA, RSI, ATR, and volume thresholds, as well as risk management parameters like stop-loss and take-profit levels.
 
-```
-EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold
-10,30,14,45,55,14,3.0,0.5,1.5,1.2,10,50
-```
-For this project, we use data from the period 2023-01-01 to 2023-12-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
+| EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold |
+|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|
+| 10        | 30       | 14         | 45        | 55        | 14          | 3.0      | 0.5         | 1.5       | 1.2               | 10             | 50                  |
+ 
+For backtesting, we use data from the period 2023-01-01 to 2023-12-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 - `--dataset`: specify the dataset file to be used
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
 - `--parameters`: specify the directory for parameters.
@@ -127,15 +131,15 @@ MDD: -16.49%
 
 ## Out-of-sample Backtesting
 After optimization, we identified the top 5 parameter sets with the highest Sharpe ratios. The results are saved in `/OPTIMIZATION_RANDOM/parameters.csv`, and the top 5 are listed below.
-```
-SampleIndex,EMA_Short,EMA_Long,RSI_Period,RSI_lower,RSI_upper,ATR_period,Max_Loss,Min_Profit,ATR_Mult,Volume_Threshold,Volume_window,RSI_exit_threshold,Sharpe,mdd,net_profit
-271,10,25,18,25,70,14,2.5,1,1,1.2,20,45,2.782016973,-0.07720320466,29702000
-1634,8,40,14,35,70,21,5,1,1,0.8,10,45,2.717278496,-0.07548636353,41320000
-974,5,20,18,35,70,14,4.5,1,1,0.8,15,50,2.674389187,-0.06388517122,36240000
-2500,15,25,18,25,70,14,1.5,1,1,0.8,20,50,2.594883786,-0.07613530181,29810000
-2358,10,30,18,25,70,21,2,0.5,1,0.8,15,55,2.573981968,-0.07130522918,30525000
-```
-For out-of-sample backtesting, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
+| SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold | Sharpe        | mdd             | net_profit |
+|-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|
+| 271         | 10        | 25       | 18         | 25        | 70        | 14          | 2.5      | 1           | 1         | 1.2               | 20             | 45                  | 2.782016973    | -0.07720320466   | 29702000    |
+| 1634        | 8         | 40       | 14         | 35        | 70        | 21          | 5        | 1           | 1         | 0.8               | 10             | 45                  | 2.717278496    | -0.07548636353   | 41320000    |
+| 974         | 5         | 20       | 18         | 35        | 70        | 14          | 4.5      | 1           | 1         | 0.8               | 15             | 50                  | 2.674389187    | -0.06388517122   | 36240000    |
+| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    |
+| 2358        | 10        | 30       | 18         | 25        | 70        | 21          | 2        | 0.5         | 1         | 0.8               | 15             | 55                  | 2.573981968    | -0.07130522918   | 30525000    |
+ 
+For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 
 ```
 python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters.csv
@@ -154,13 +158,19 @@ After running the command below, we obtained the Sharpe Ratio and Maximum Drawdo
 
 ![Diagram](/figures/all_backtests_out_sample.png)
 ## Paper Trading
-- Describe the Paper Trading step
-- Step 7 of the Nine-Step
-- Optional
-### Optimization Result
-- Brieftly shown the result: table, image, etc.
-- Has link to the Paper Trading Report
+All the code in paper trading is in the paper_trading folder
 
+ ```
+ cd paper_trading
+ python paper_trading.py
+ ```
+We have configured the paper trading environment using incoming messages from Kafka in combination with historical data retrieved from the database. However, the current backtesting implementation does not support dynamic parameter adjustment and is operating with a fixed set of parameters.
+
+| EMA_FAST | EMA_SLOW | RSI_PERIOD | ATR_PERIOD | VOL_WINDOW | VOL_THRES | RSI_UPPER | RSI_LOWER | MAX_LOSS | MIN_PROFIT | ATR_MULT | RSI_EXIT |
+|----------|----------|------------|------------|-------------|------------|------------|------------|-----------|-------------|-----------|-----------|
+| 10       | 30       | 18         | 21         | 15          | 0.8        | 70         | 25         | 2.0       | 0.5         | 1.0       | 55        |
+
+The message received from Kafka is preprocessed to align with the format of the above data.
 
 ## Conclusion
 - What is the conclusion?

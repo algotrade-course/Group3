@@ -1,87 +1,76 @@
 import json
 import time
+import os
 from kafka import KafkaConsumer
-from trading_strategy import TradingStrategy
 import pandas as pd
-from datetime import datetime, timedelta
-
+from trading_strategy import TradingStrategy 
+from tick_stream import TickStreamSimulator
 
 def loafd_config():
     with open("kafka-config.json", 'r') as f:
         config = json.load(f)
     return config
 
-def parse_timestamp(ts_str):
-    return datetime.strptime(ts_str, "%d/%m/%Y %H:%M:%S")
-
-topic = "HNXDS.VN30F1M"  
-config = loafd_config()  
-consumer = KafkaConsumer(
-    topic,
-    **config,
-    group_id="21125146",  
-    auto_offset_reset="latest",
-    value_deserializer=lambda v: json.loads(v.decode('utf-8')),
-)
-
-strategy = TradingStrategy()
-tick_buffer = []
-current_bar_start = None
-ohlcv_data = []
-
-for msg in consumer:
-    tick = msg.value
-
-    price_info = tick.get('latest_matched_price', {})
-    try:
-        price = float(price_info['value'])
-        tick_time = datetime.strptime(price_info['last_updated_str'], "%d/%m/%Y %H:%M:%S")
-    except (KeyError, ValueError, TypeError) as e:
-        print(f"Error parsing tick: {e}")  # Debug: Print parsing errors
-        continue
-
-    symbol = tick.get('instrument', 'UNKNOWN')
-    volume = 0.0  # Default volume if not provided
-    print(f"Parsed tick - Price: {price}, Time: {tick_time}, Symbol: {symbol}, Volume: {volume}")  # Debug: Parsed tick details
-
-    bar_time = tick_time.replace(second=0, microsecond=0)
-    bar_time = bar_time.replace(minute=bar_time.minute - bar_time.minute % 5)
-
-    if current_bar_start is None:
-        current_bar_start = bar_time
-        print(f"Initialized current_bar_start: {current_bar_start}")  # Debug: Initial bar start time
-
-    if tick_time >= current_bar_start + timedelta(minutes=5):
-        print(f"New bar detected. Current bar start: {current_bar_start}, Tick time: {tick_time}")  # Debug: New bar condition
-
-        if tick_buffer:
-            prices = [t['price'] for t in tick_buffer]
-            volumes = [t['volume'] for t in tick_buffer]
-            print(f"Tick buffer - Prices: {prices}, Volumes: {volumes}")  # Debug: Tick buffer contents
-
-            bar = {
-                'Date': current_bar_start.strftime('%Y-%m-%d %H:%M:%S'),
-                'Open': prices[0],
-                'High': max(prices),
-                'Low': min(prices),
-                'Close': prices[-1],
-                'Volume': sum(volumes),
-                'tickersymbol': symbol
-            }
+def consume_message(config: dict, topic: str, simulator: TickStreamSimulator):
 
 
-            ohlcv_data.append(bar)
-            df = pd.DataFrame(ohlcv_data)
+    consumer = KafkaConsumer(
+        topic,
+        **config,
+        group_id="21125071",  # Student-specific group_id
+        auto_offset_reset="latest",
+        value_deserializer=lambda v: json.loads(v.decode('utf-8')),
+        enable_auto_commit=True,
+    )
 
-            strategy.process_tick(bar, df)
+    print("Consumer started, waiting for messages...")
+    columns_to_remove = [
+        'bid_price_1', 'bid_quantity_1', 'ask_price_1', 'ask_quantity_1',
+        'bid_price_2', 'bid_quantity_2', 'ask_price_2', 'ask_quantity_2',
+        'bid_price_3', 'bid_quantity_3', 'ask_price_3', 'ask_quantity_3',
+        'bid_price_4', 'bid_quantity_4', 'ask_price_4', 'ask_quantity_4',
+        'bid_price_5', 'bid_quantity_5', 'ask_price_5', 'ask_quantity_5',
+        'bid_price_6', 'bid_quantity_6', 'ask_price_6', 'ask_quantity_6',
+        'bid_price_7', 'bid_quantity_7', 'ask_price_7', 'ask_quantity_7',
+        'bid_price_8', 'bid_quantity_8', 'ask_price_8', 'ask_quantity_8',
+        'bid_price_9', 'bid_quantity_9', 'ask_price_9', 'ask_quantity_9',
+        'bid_price_10', 'bid_quantity_10', 'ask_price_10', 'ask_quantity_10'
+    ]
+    i = 0
 
-        tick_buffer = []
-        current_bar_start = bar_time
+    prev_trade_count = 0
 
-    tick_buffer.append({
-        'timestamp': tick_time,
-        'price': price,
-        'volume': volume,
-        'symbol': symbol
-    })
-    print(f"Appended to tick buffer: {tick_buffer[-1]}")  # Debug: Appended tick details
+    for message in consumer:
+        tick = message.value
+        tick_data = pd.DataFrame([tick])
+        tick_data.drop(columns=columns_to_remove, inplace=True, errors='ignore')
+        simulator.run(tick_data)
+
+
+        trade_log = simulator.get_trading_log()
+        if len(trade_log) > prev_trade_count:
+            new_trades = trade_log[prev_trade_count:]
+            new_trades_df = pd.DataFrame(new_trades, columns=['Date', 'Position Type', 'Entry Price', 'Exit Price', 'PnL'])
+
+            # Append only new trades
+            new_trades_df.to_csv('trade_log.csv', mode='a', header=not os.path.exists('trade_log.csv'), index=False)
+
+            prev_trade_count = len(trade_log)
+
+        i += 1
+        if i >= 1000:
+            break
+
+    time.sleep(1)
+    
+    # consumer.seek_to_beginning()
+
+
+
+if __name__ == "__main__":
+    config = loafd_config()  
+    topic = "HNXDS.VN30F1M"  
+    strategy = TradingStrategy()
+    simulator=TickStreamSimulator()  
+    consume_message(config, topic, simulator)
+    
