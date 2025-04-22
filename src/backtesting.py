@@ -162,10 +162,8 @@ if __name__ == "__main__":
     parser.add_argument("--result_dir", type=str, default="result", help="Directory to save result CSVs")
     parser.add_argument("--parameters", type=str, help="Path to the parameter out sample CSV file")
     args = parser.parse_args()
-    if data_path_env is not None:
-        data_path = os.path.join(data_path_env, args.dataset)
-    else:
-        data_path = os.path.join("src/data", args.dataset)
+    data_path = os.path.join(data_path_env, args.dataset)
+
     
     plot_path = os.path.join(args.result_dir, "all_backtests.png")
 

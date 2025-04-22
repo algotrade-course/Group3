@@ -101,11 +101,11 @@ There are two main components to the hypothesis: Criteria for opening a position
     - The current loss exceeds the MAX_LOSS threshold.
     - CURRENT_PRICE drops below EMA_LONG.
     - RSI falls below the RSI_EXIT_THRESHOLD,
-    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE < max(ENTRY_PRICE + MIN_PROFIT,PREVIOUS_CLOSE - ATR × ATR_MULTIPLIER).
+    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE < max(ENTRY_PRICE + MIN_PROFIT,PREVIOUS_CLOSE - ATR ?? ATR_MULTIPLIER).
 - Close `SHORT` position if:
     - The current loss exceeds the MAX_LOSS threshold.
     - CURRENT_PRICE rises above EMA_LONG,
-    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE > min(ENTRY_PRICE - MIN_PROFIT, PREVIOUS_CLOSE + ATR × ATR_MULTIPLIER)
+    - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE > min(ENTRY_PRICE - MIN_PROFIT, PREVIOUS_CLOSE + ATR ?? ATR_MULTIPLIER)
 
 ## Data
 - Data source: Algotrade internship database
@@ -194,7 +194,7 @@ For backtesting, we use data from the period 2023-01-01 to 2023-12-01 with a 5T 
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
 - `--parameters`: specify the directory for parameters.
 ```
-python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters.csv
+python src/backtesting.py --dataset 2023-01-01_to_2023-12-31_by_5T.csv --result_dir result_in_sample --parameters src/parameters_in_sample.csv
 ```
 ### In-sample Backtesting Result
 After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
@@ -262,7 +262,7 @@ After optimization, we identified the top 5 parameter sets with the highest Shar
 For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 
 ```
-python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters.csv
+python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir result_out_sample --parameters src/parameters_out_sample.csv
 ```
 
 ### Out-of-sample Backtesting Reuslt

@@ -215,11 +215,8 @@ if __name__ == "__main__":
     connection = create_connection()
     data = process_data(get_data_from_db(connection, args.start_date, args.end_date))
 
-    if data_path is not None:
-        os.makedirs(data_path, exist_ok=True)
-    else:
-        data_path = "src/data"
-        os.makedirs(data_path, exist_ok=True)
+    os.makedirs(data_path, exist_ok=True)
+
 
     # File paths based on resolved data_path
     raw_output_path = f"{data_path}/{args.start_date}_to_{args.end_date}.csv"
