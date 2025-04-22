@@ -15,38 +15,38 @@ This study introduces a rule-based trading strategy for VN30F1M, using technical
 ### EMA (Exponential Moving Average)
 The Exponential Moving Average (EMA) is a weighted moving average that gives more weight to recent prices. It is calculated as:
 
-\[
+$$
 EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})
-\]
+$$
 
 Where:
-- \( EMA_t \) is the EMA at time \( t \),
-- \( EMA_{t-1} \) is the previous EMA value,
-- \( P_t \) is the current price at time \( t \),
-- \( \alpha \) is the smoothing factor, defined as \( \alpha = \frac{2}{N+1} \),
-- \( N \) is the number of periods.
+- $ EMA_t $ is the EMA at time $ t $,
+- $ EMA_{t-1} $ is the previous EMA value,
+- $ P_t $ is the current price at time $ t $,
+- $ \alpha $ is the smoothing factor, defined as $ \alpha = \frac{2}{N+1} $,
+- $ N $ is the number of periods.
 
 
 ### RSI (Relative Strength Index)
 RSI measures momentum by comparing recent gains to recent losses, with values between 0 and 100. It is calculated as:
 
-\[
+$$
 RSI = 100 - \left( \frac{100}{1 + RS} \right)
-\]
+$$
 
 Where:
-- \(RS\) is the average gain of up periods divided by the average loss of down periods.
+- $RS$ is the average gain of up periods divided by the average loss of down periods.
 
 ### ATR (Average True Range)
 The Average True Range (ATR) measures market volatility. The formula is:
 
-\[
+$$
 ATR = \frac{1}{N} \sum_{i=1}^{N} \text{True Range}_i
-\]
+$$
 
 Where:
-- \(N\) is the number of periods,
-- \(\text{True Range}_i\) is the maximum of:
+- $N$ is the number of periods,
+- $\text{True Range}_i$ is the maximum of:
   - Current high - current low,
   - Absolute value of current high - previous close,
   - Absolute value of current low - previous close.
@@ -126,7 +126,7 @@ Generally, the decision-making process of the algorithm is driven by the followi
 The resulting file will be saved under the name: `<start_date>_to_<end_date>_by_<tick_interval>.csv`
 For example:
 ```
-**src/data/2023-01-01_to_2023-12-31_by_5T.csv**
+src/data/2023-01-01_to_2023-12-31_by_5T.csv
 ```
 The CSV file will include the following columns:
 - ``Date``: The date of the interval
