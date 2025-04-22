@@ -2,6 +2,9 @@
 - Pham Vo Quynh Nhu - 21125052
 - Ho Viet Bao Long - 21125071
 - Nguyen Phuc Bao Uyen - 21125146
+
+> ⚠️ **Note: Make sure you're inside the `Group 03` folder (the root directory) before continuing.**
+
 ## Abstract
 This study introduces a rule-based trading strategy for VN30F1M, using technical indicators to define precise entry and exit points for long and short positions. Long entries rely on short-term EMAs crossing above long-term EMAs, high RSI, and strong volume, while short entries occur under opposite conditions. Exits are governed by strict rules, including stop-loss limits, EMA cross reversals, RSI shifts, and an ATR-based trailing stop. The strategy aims to enhance trade consistency and risk management in a Vietnam derivatives market.
 ## Introduction
@@ -103,12 +106,11 @@ There are two main components to the hypothesis: Criteria for opening a position
 - **No position is closed if none of the exit conditions are triggered.**
 - **Close a** `LONG` **position when any of the following conditions apply**
     - The current loss exceeds the MAX_LOSS threshold.
-    - CURRENT_PRICE drops below EMA_LONG.
-    - RSI falls below the RSI_EXIT_THRESHOLD,
+    - CURRENT_PRICE drops below EMA_LONG and RSI falls below the RSI_EXIT_THRESHOLD.
     - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE < max(ENTRY_PRICE + MIN_PROFIT,PREVIOUS_CLOSE - ATR × ATR_MULTIPLIER).
 - **Close** `SHORT` **position when any of the following conditions apply:**
     - The current loss exceeds the MAX_LOSS threshold.
-    - CURRENT_PRICE rises above EMA_LONG,
+    - CURRENT_PRICE rises above EMA_LONG and RSI is greater than the RSI_EXIT_THRESHOLD.
     - Trailing Stop Condition: If profit exceeds MIN_PROFIT, and CURRENT_PRICE > min(ENTRY_PRICE - MIN_PROFIT, PREVIOUS_CLOSE + ATR × ATR_MULTIPLIER)
 
 ## Data
@@ -126,7 +128,7 @@ There are two main components to the hypothesis: Criteria for opening a position
 The resulting file will be saved under the name: `<start_date>_to_<end_date>_by_<tick_interval>.csv`
 For example:
 ```
-**src/data/2023-01-01_to_2023-12-31_by_5T.csv**
+src/data/2023-01-01_to_2023-12-31_by_5T.csv
 ```
 The CSV file will include the following columns:
 - ``Date``: The date of the interval
@@ -207,8 +209,6 @@ SHARPE RATIO: 1.0846
 MDD: -16.49%
 ```
 Here is the in-sample backtesting result:
-![Diagram](/result_in_sample/plot_10_30_14.png)
-
 ![Diagram](/figures/all_backtests_in_sample.png)
 
 ## Optimization
@@ -245,6 +245,8 @@ python src/optimization.py -d src/data/2023-01-01_to_2023-12-31_by_5T.csv -p src
 
 To draw the graphs to illustrate the results of optimization process, run the following script:
 - `-v`: Path to summary.csv file created by the optimization process.
+- ⚠️ **Note:** Click the exit button (red button in the top-left corner) of each figure to view the next one.
+Do not terminate the program. The figures will appear one after another.
 ```
 python src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
 ```
