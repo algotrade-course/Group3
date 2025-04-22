@@ -202,6 +202,8 @@ After running the command below, we obtained the Sharpe Ratio and Maximum Drawdo
 SHARPE RATIO: 1.0846
 MDD: -16.49%
 ```
+![Diagram](/figures/plot_10_30_14.png)
+
 ![Diagram](/figures/all_backtests_in_sample.png)
 
 ## Optimization
@@ -275,22 +277,6 @@ After running the command below, we obtained the Sharpe Ratio and Maximum Drawdo
 | 974    | 0.3945       | -17.39%                 |
 | 2500    | 1.6497       | -8.00%                  |
 | 2358   | 1.4416       | -9.66%                  |
-
-![Diagram](/figures/all_backtests_out_sample.png)
-### Sample 271 Result
-![Diagram](/figures/sample_271.png)
-
-### Sample 974 Result
-![Diagram](/figures/sample_974.png)
-
-### Sample 1634 Result
-![Diagram](/figures/sample_1634.png)
-
-### Sample 2358 Result
-![Diagram](/figures/sample_1634.png)
-
-### Sample 2500 Result
-![Diagram](/figures/sample_1634.png)
 
 ## Paper Trading
 All the code in paper trading is in the paper_trading folder

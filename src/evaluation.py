@@ -58,7 +58,7 @@ def plot_backtesting_results(portfolio_values, output_file):
         return
 
     mdd, drawdown = maximumDrawdown(portfolio_series)
-    sharpe_ratio = sharpe_ratio(portfolio_series, rf_rate=0.03)
+    sharpe = sharpe_ratio(portfolio_series, rf_rate=0.03)
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
     ax1.plot(dates, portfolio_series, label="Portfolio Value", color="blue", linewidth=2)
@@ -74,7 +74,7 @@ def plot_backtesting_results(portfolio_values, output_file):
     ax2.set_ylabel("Drawdown", color="red")
     ax2.tick_params(axis="y", labelcolor="red")
 
-    plt.title(f"Backtesting Results\nMax Drawdown: {mdd:.2%} | Sharpe Ratio: {sharpe_ratio:.4f}")
+    plt.title(f"Backtesting Results\nMax Drawdown: {mdd:.2%} | Sharpe Ratio: {sharpe:.4f}")
     ax1.legend(loc="upper left")
     ax2.legend(loc="lower left")
 
@@ -125,3 +125,24 @@ def plot_all_portfolio_results(result_dir="result", output_file="result/all_back
     print(f"Saved plot to {output_file}")
 
     plt.show()
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Plot backtesting results from a CSV file.")
+    parser.add_argument("--input_csv", required=True, help="Path to CSV file containing portfolio values")
+    parser.add_argument("--output_file", required=True, help="Path to save the output plot")
+
+    args = parser.parse_args()
+
+    try:
+        df = pd.read_csv(args.input_csv)
+        if "Date" not in df.columns or "Portfolio Value" not in df.columns:
+            raise ValueError("CSV must contain 'Date' and 'Portfolio Value' columns.")
+        portfolio_values = df[["Date", "Portfolio Value"]].to_dict("records")
+    except Exception as e:
+        print(f"Error loading CSV file: {e}")
+        exit(1)
+
+    plot_backtesting_results(portfolio_values, args.output_file)
+    print("Plotting complete.")
