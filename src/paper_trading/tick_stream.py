@@ -2,7 +2,7 @@ import pandas as pd
 import ast
 from datetime import datetime, timedelta
 
-from preprocess_pt import load_data, create_connection, get_data_from_db, process_data, aggregate_to_interval
+from preprocess_pt import create_connection, get_data_from_db, process_data, aggregate_to_interval
 from trading_strategy import TradingStrategy
 
 class TickStreamSimulator:
@@ -24,8 +24,7 @@ class TickStreamSimulator:
         if yesterday.day == 1:
             return None
 
-        db_info = load_data()
-        connection = create_connection(db_info)
+        connection = create_connection()
         last_date_data = process_data(get_data_from_db(connection, yesterday.date(),current_date.date()))
         last_date_data_5T = aggregate_to_interval(last_date_data, "5T")
         return last_date_data_5T

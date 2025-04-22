@@ -1,29 +1,31 @@
-import json
+import os
 import psycopg2 as psycopg
 import pprint
 import pandas as pd
 from datetime import datetime, timedelta
 import argparse
-import os
+from dotenv import load_dotenv
+import sys
+from tqdm import tqdm
+import pandas as pd
+import pprint
+import time
+from tqdm import tqdm
+from datetime import datetime, timedelta
+load_dotenv()
+data_path = os.getenv('DATAPATH')
+def create_connection():
+    load_dotenv()
 
-
-
-def load_data():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(base_dir, "../database.json")
-    print(f"Loading database configuration from: {json_path}")  
-    with open(json_path) as f:
-        return json.load(f)
-    
-def create_connection (db_info):
-    con= psycopg.connect(
-      host=db_info['host'],
-      port=db_info['port'],
-      dbname=db_info['database'],
-      user=db_info['user'],
-      password=db_info['password']
+    con = psycopg.connect(
+        host=os.getenv('DB_HOST'),
+        port=os.getenv('DB_PORT'),
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD')
     )
     return con
+  
 
 def get_data_from_db(connection, start_date, end_date):
     query=f"""
