@@ -295,10 +295,11 @@ For out-of-sample testing, we use data from the period 2024-01-01 to 2025-01-01 
 python src/backtesting.py --dataset 2024-01-01_to_2025-01-01_by_5T.csv --result_dir src/result_out_sample --parameters src/parameters_out_sample.csv
 ```
 
-After running the command below, we obtained the Sharpe Ratio and Maximum Drawdown:
+After running the command above, we obtained the Sharpe Ratio and Maximum Drawdown:
 
 | Sample Index | Sharpe Ratio | Maximum Drawdown (MDD) |
 |------------|--------------|-------------------------|
+| 0    | 0.4091       | -19.32%                 |
 | 271    | 0.5741       | -11.77%                 |
 | 1634    | -0.0494      | -25.98%                 |
 | 974    | 0.3945       | -17.39%                 |
