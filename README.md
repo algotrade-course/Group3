@@ -27,7 +27,7 @@ The Exponential Moving Average (EMA) is a weighted moving average that gives mor
 $EMA_t = EMA_{t-1} + \alpha \times (P_t - EMA_{t-1})$
 
 Where:
-- $EMA_t$ is the EMA at time $$t$,
+- $EMA_t$ is the EMA at time $t$,
 - $EMA_{t-1}$ is the previous EMA value,
 - $P_t$ is the current price at time $t$,
 - $\alpha$ is the smoothing factor, defined as $\alpha$ = $\frac{2}{N+1}$,
