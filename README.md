@@ -252,9 +252,11 @@ python src/optimization.py -v src/OPTIMIZATION_RANDOM/summary.csv
 ```
 
 The set of configurations was evaluated using the following scoring formula:
+
 $$
 Score = Sharpe - \alpha \cdot |MDD|
 $$
+
 - $\alpha = 0.5$
 - $\beta = 0.01$
 
