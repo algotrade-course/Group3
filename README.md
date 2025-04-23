@@ -258,7 +258,6 @@ Score = Sharpe - \alpha \cdot |MDD|
 $$
 
 - $\alpha = 0.5$
-- $\beta = 0.01$
 
 This scoring function considers the Sharpe ratio as the primary evaluation metric, while the impacts of Maximum Drawdown is adjusted using the weights $\alpha$. Run the following command to compute the scores based on the results:
 ```
@@ -311,9 +310,9 @@ After running the command above, we obtained the Sharpe Ratio and Maximum Drawdo
 ![Diagram](/figures/all_backtests_out_sample.png)
 
 The highest parameter for the outsample is 
-| SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold | Sharpe        | mdd             | net_profit |
+| SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold |
 |-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|
-| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  | 2.594883786    | -0.07613530181   | 29810000    |
+| 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  |
 
 ## Paper Trading
 All the code in paper trading is in the paper_trading folder
@@ -332,7 +331,9 @@ The message received from Kafka is preprocessed to align with the format of the 
 
 
 ## Conclusion
-This trading strategy utilizes a combination of trend and momentum indicators—specifically EMA, RSI, and volume—to identify high-probability entry points in the market. The project offers a basic view of the algorithmic trading workflow. However, the final results can vary significantly depending on the dataset, so no definitive conclusions can be drawn at this stage. In the future, we aim to further optimize the process to uncover more concrete evidence that supports our hypothesis.
+This trading strategy combines trend and momentum indicators—namely EMA, RSI, and volume—to identify high-probability market entry points. The project provides a foundational overview of the algorithmic trading workflow. Overall, the results were promising, demonstrating relatively strong Sharpe ratios and acceptable drawdowns in both in-sample and out-of-sample evaluations. Notably, the final model achieved solid performance on both datasets, with profit rates of 74.525% and 43.735%, respectively, based on an initial capital of 40,000,000 VND.
+
+However, the optimization was conducted on only a subset of parameter combinations, which may have resulted in overlooking potentially better-performing configurations. Additionally, the paper trading phase lasted only three days, providing insufficient data to thoroughly evaluate the model’s performance. The current hypotheses are strictly based on technical analysis, which limits the model’s ability to account for market events and news. Therefore, future work should consider expanding the parameter search space to explore more configurations, extending the paper trading period for more comprehensive monitoring, and incorporating modern techniques such as Machine Learning or Deep Learning to better capture market-driven events and anomalies.
 
 ## Reference
 [1] Vietnam News Agency, “Six years of derivative stock market: VN30 index futures contract up 27.46% annually,” VietnamPlus, Aug. 14, 2023. [Online]. Available: https://en.vietnamplus.vn/six-years-of-derivative-stock-market-vn30-index-futures-contract-up-2746-annually-post266231.vnp. [Accessed: Apr. 23, 2025].​
