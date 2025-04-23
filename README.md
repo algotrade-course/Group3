@@ -195,7 +195,7 @@ In the `src/parameters.csv` file, key hyperparameters for our hypothesis are set
 |-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|
 | 10        | 30       | 14         | 45        | 55        | 14          | 3.0      | 0.5         | 1.5       | 1.2               | 10             | 50                  |
  
-For backtesting, we use data from the period 2023-01-01 to 2023-12-01 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
+For backtesting, we use data from the period 2023-01-01 to 2023-12-31 with a 5T interval as the in-sample period. By default, the data file is saved in `src/data` if you do not define DATAPATH in `src/.env`.
 - `--dataset`: specify the dataset file to be used
 - `--result_dir`: specify the directory for saving charts, trade logs, and portfolio values
 - `--parameters`: specify the directory for parameters.
