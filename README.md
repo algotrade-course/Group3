@@ -310,8 +310,9 @@ After running the command above, we obtained the Sharpe Ratio and Maximum Drawdo
 ![Diagram](/figures/all_backtests_out_sample.png)
 
 The highest parameter for the outsample is 
+
 | SampleIndex | EMA_Short | EMA_Long | RSI_Period | RSI_lower | RSI_upper | ATR_period | Max_Loss | Min_Profit | ATR_Mult | Volume_Threshold | Volume_window | RSI_exit_threshold |
-|-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|----------------|------------------|-------------|
+|-------------|-----------|----------|------------|-----------|-----------|-------------|----------|-------------|-----------|-------------------|----------------|---------------------|
 | 2500        | 15        | 25       | 18         | 25        | 70        | 14          | 1.5      | 1           | 1         | 0.8               | 20             | 50                  |
 
 ## Paper Trading
