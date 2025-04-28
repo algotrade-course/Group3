@@ -1,7 +1,7 @@
 ![Static Badge](https://img.shields.io/badge/PLUTUS-75%25-darkgreen)
 ![Static Badge](https://img.shields.io/badge/PLUTUS-Sample-darkblue)
 
-# Group 03
+# TrueTrend
 - Pham Vo Quynh Nhu - 21125052
 - Ho Viet Bao Long - 21125071
 - Nguyen Phuc Bao Uyen - 21125146
